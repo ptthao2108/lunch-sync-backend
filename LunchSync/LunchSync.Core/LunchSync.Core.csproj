@@ -7,9 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Common\Abstactions\" />
     <Folder Include="Common\Enums\" />
-    <Folder Include="Common\Interfaces\" />
     <Folder Include="Common\ValueObjects\" />
     <Folder Include="Exceptions\" />
     <Folder Include="Modules\Auth\" />
