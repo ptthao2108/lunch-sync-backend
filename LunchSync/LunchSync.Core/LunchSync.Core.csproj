@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Modules\Admin\" />
+    <Folder Include="Modules\Auth\Entities\" />
+    <Folder Include="Modules\RestaurantsAnsDishes\Entities\" />
+    <Folder Include="Modules\Sessions\Entities\" />
+    <Folder Include="Modules\VotingAndScoring\Entities\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.14" />
+  </ItemGroup>
+
+</Project>
