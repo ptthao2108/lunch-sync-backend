@@ -1,3 +1,5 @@
+using LunchSync.Core;
+using LunchSync.Infrastructure;
 using Microsoft.OpenApi.Models;
 
 namespace LunchSync.Api
@@ -8,16 +10,20 @@ namespace LunchSync.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Add Layers
+            builder.Services.AddCore();
+            builder.Services.AddInfrastructure(builder.Configuration);
 
+            // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(c =>
+            builder.Services.AddSwaggerGen(options =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo
+                options.SwaggerDoc("v1", new()
                 {
                     Title = "LunchSync API",
-                    Version = "v1"
+                    Version = "v1",
+                    Description = "API for LunchSync - Group Lunch Decision App"
                 });
             });
             builder.Services.AddOpenApi();
