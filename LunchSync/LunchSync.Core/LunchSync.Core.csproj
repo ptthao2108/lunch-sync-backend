@@ -6,4 +6,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Common\Abstactions\" />
+    <Folder Include="Common\Enums\" />
+    <Folder Include="Common\Interfaces\" />
+    <Folder Include="Common\ValueObjects\" />
+    <Folder Include="Exceptions\" />
+    <Folder Include="Modules\Auth\" />
+    <Folder Include="Modules\Admin\" />
+    <Folder Include="Modules\RestaurantsAnsDishes\" />
+    <Folder Include="Modules\VotingAndScoring\" />
+    <Folder Include="Modules\Sessions\" />
+  </ItemGroup>
+
 </Project>
