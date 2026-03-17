@@ -1,6 +1,6 @@
-using LunchSync.Core.Common.Abstractions;
+using LunchSync.Core.Common.Abstactions;
 using LunchSync.Core.Common.Enums;
-namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 namespace LunchSync.Core.Modules.Auth.Entities;
 
 public sealed class User: BaseEntity

@@ -20,7 +20,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         // 3. Cấu hình các cột theo Schema
         builder.Property(u => u.CognitoSub).IsRequired().HasMaxLength(255);
 
-        builder.Property(u => u.Email).IsRequired().IsUnique().HasMaxLength(255);
+        builder.Property(u => u.Email).IsRequired().HasMaxLength(255);
+        builder.HasIndex(u => u.Email).IsUnique();
 
         builder.Property(u => u.FullName).HasMaxLength(255);
 

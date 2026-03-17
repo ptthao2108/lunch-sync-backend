@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using LunchSync.Core.Modules.Sesions.Entities;
+using LunchSync.Core.Modules.Sessions.Entities;
+using LunchSync.Core.Common.Enums;
 
 namespace LunchSync.Infrastructure.Persistence.Configurations;
 //Bảng Sessions

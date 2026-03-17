@@ -13,8 +13,8 @@ public class CollectionConfiguration : IEntityTypeConfiguration<Collection>
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(c => c.Name).IsRequired().HasMaxLength(255);
-        builder.Property(c => c.ConverageRadiusMeters).HasDefaultValue(800);
-        builder.Property(c => c.Status).HasConversion<string>().HasDefaultValueSql(CollectionStatus.Active);
+        builder.Property(c => c.CoverageRadiusMeters).HasDefaultValue(800);
+        builder.Property(c => c.Status).HasConversion<string>().HasDefaultValue(CollectionStatus.Active);
         builder.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
 
     }

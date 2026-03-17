@@ -1,4 +1,6 @@
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace  LunchSync.Infrastructure.Persistence.Configurations;
 
 public class SubmissionPhotoConfiguration : IEntityTypeConfiguration<SubmissionPhoto>

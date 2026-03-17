@@ -2,6 +2,7 @@ namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Modules.Auth.Entities;
 
 public sealed class Submission : BaseEntity
 {

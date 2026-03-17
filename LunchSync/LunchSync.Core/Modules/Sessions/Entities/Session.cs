@@ -1,5 +1,7 @@
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Modules.Auth.Entities;
+using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 namespace LunchSync.Core.Modules.Sessions.Entities;
 
 public sealed class Session: BaseEntity
@@ -7,7 +9,7 @@ public sealed class Session: BaseEntity
     public string Pin { get; set; } = null!;
     public Guid HostId { get; set; } 
     public Guid CollectionId { get; set; } 
-    public PriceTier PriceTier { get; set; } = null!;
+    public PriceTier PriceTier { get; set; }
     public SessionStatus Status { get; set; } = SessionStatus.Waiting;
     
     //group-vector

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using LunchSync.Core.Modules.Sesions.Entities;
+using LunchSync.Core.Modules.Sessions.Entities;
 
 namespace LunchSync.Infrastructure.Persistence.Configurations;
 //Bảng Participants

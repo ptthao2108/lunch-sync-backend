@@ -6,7 +6,7 @@ public sealed class Restaurant: BaseEntity
     public string Name { get; set; } = null!;
     public string Address { get; set; } = null!;
     public string? GoogleMapsUrl { get; set; }
-    public PriceTier PriceTier { get; set; } = null!;
+    public PriceTier PriceTier { get; set; } 
     public double? Rating { get; set; }
     public string? ThumbnailUrl { get; set; }
     public RestaurantStatus Status { get; set; } = RestaurantStatus.Active;
