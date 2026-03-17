@@ -1,0 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+using LunchSync.Core.Common.Enums;
+
+namespace LunchSync.Infrastructure.Persistence.Configurations;
+
+public class CollectionConfiguration : IEntityTypeConfiguration<Collection>
+{
+    public void Configure(EntityTypeBuilder<Collection> builder)
+    {
+        builder.ToTable("collections");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(c => c.Name).IsRequired().HasMaxLength(255);
+        builder.Property(c => c.ConverageRadiusMeters).HasDefaultValue(800);
+        builder.Property(c => c.Status).HasConversion<string>().HasDefaultValueSql(CollectionStatus.Active);
+        builder.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
+
+    }
+}

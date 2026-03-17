@@ -4,7 +4,7 @@ namespace LunchSync.Core.Modules.Sessions.Entities;
 
 public sealed class Participant: BaseEntity
 {
-    public Guid SessionId { get; set;} = null!;
+    public Guid SessionId { get; set;}
     
     public string Nickname { get; set; } = null!;
     //unique(SessionId, Nickname)

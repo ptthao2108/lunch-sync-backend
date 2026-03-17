@@ -5,8 +5,8 @@ namespace LunchSync.Core.Modules.Sessions.Entities;
 public sealed class Session: BaseEntity
 {
     public string Pin { get; set; } = null!;
-    public Guid HostId { get; set; } = null!;
-    public Guid CollectionId { get; set; } = null!;
+    public Guid HostId { get; set; } 
+    public Guid CollectionId { get; set; } 
     public PriceTier PriceTier { get; set; } = null!;
     public SessionStatus Status { get; set; } = SessionStatus.Waiting;
     

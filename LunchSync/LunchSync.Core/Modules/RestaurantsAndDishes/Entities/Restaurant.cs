@@ -9,7 +9,7 @@ public sealed class Restaurant: BaseEntity
     public PriceTier PriceTier { get; set; } = null!;
     public double? Rating { get; set; }
     public string? ThumbnailUrl { get; set; }
-    public RestaurantCollectionStatus Status { get; set; } = RestaurantCollectionStatus.Active;
+    public RestaurantStatus Status { get; set; } = RestaurantStatus.Active;
     public RestaurantSource Source { get; set; } = RestaurantSource.Admin;
     
     //Navigation Properties
