@@ -1,10 +1,10 @@
 namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Common.Abstractions;
 using LunchSync.Core.Modules.Auth.Entities;
 
-public sealed class Submission : BaseEntity
+public class Submission : BaseEntity
 {
     public Guid UserId { get; set; }
     public string RestaurantName { get; set; } = null!;

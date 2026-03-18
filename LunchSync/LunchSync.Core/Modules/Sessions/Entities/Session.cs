@@ -1,10 +1,10 @@
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Common.Abstractions;
 using LunchSync.Core.Modules.Auth.Entities;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 namespace LunchSync.Core.Modules.Sessions.Entities;
 
-public sealed class Session: BaseEntity
+public class Session : BaseEntity
 {
     public string Pin { get; set; } = null!;
     public Guid HostId { get; set; } 

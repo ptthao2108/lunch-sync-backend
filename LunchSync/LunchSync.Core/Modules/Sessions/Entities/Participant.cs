@@ -1,11 +1,12 @@
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Common.Abstractions;
 namespace LunchSync.Core.Modules.Sessions.Entities;
 
-public sealed class Participant: BaseEntity
+public class Participant : BaseEntity
 {
     public Guid SessionId { get; set;}
-    
+    public Guid? UserId { get; set; }  // NULL for anonymous users
+
     public string Nickname { get; set; } = null!;
     //unique(SessionId, Nickname)
 

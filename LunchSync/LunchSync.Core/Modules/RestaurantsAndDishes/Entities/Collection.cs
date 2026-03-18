@@ -1,13 +1,13 @@
 namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstactions;
-public sealed class Collection: BaseEntity
+using LunchSync.Core.Common.Abstractions;
+public class Collection : BaseEntity
 {
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
-    public double? Lat { get; set; }
-    public double? Lon { get; set; }
-    public int CoverageRadiusMeters { get; set; } = 800;
+    public double? LandmarkLat { get; set; }
+    public double? LandmarkLon { get; set; }
+    public int CoverageRadiusMeters { get; set; } = 250;
     public CollectionStatus Status { get; set; } = CollectionStatus.Active;
     
     //Navigation Properties

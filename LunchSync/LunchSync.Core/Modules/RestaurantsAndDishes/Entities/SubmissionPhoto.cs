@@ -1,9 +1,9 @@
 namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Common.Abstractions;
 
-public sealed class SubmissionPhoto: BaseEntity
+public class SubmissionPhoto : BaseEntity
 {
     public Guid SubmissionId { get; set; } 
     public string PhotoUrl { get; set; } = null!;
