@@ -1,4 +1,4 @@
-using LunchSync.Core.Common.Abstactions;
+using LunchSync.Core.Common.Abstractions;
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 namespace LunchSync.Core.Modules.Auth.Entities;
