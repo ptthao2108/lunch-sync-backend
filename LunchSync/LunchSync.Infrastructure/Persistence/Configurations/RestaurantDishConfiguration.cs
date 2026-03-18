@@ -1,5 +1,4 @@
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
-using LunchSync.Core.Common.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace LunchSync.Infrastructure.Persistence.Configurations;

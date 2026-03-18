@@ -4,36 +4,36 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LunchSync.Infrastructure
+namespace LunchSync.Infrastructure;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        public static IServiceCollection AddInfrastructure(
-            this IServiceCollection services,
-            IConfiguration configuration)
-        {
-            // ===========================================
-            // Database
-            // ===========================================
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+        // ===========================================
+        // Database
+        // ===========================================
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(connectionString, npgsqlOptions =>
-                {
-                    npgsqlOptions.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
 
-                    // Enable retry on failure
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorCodesToAdd: null);
-                }));
+                // Enable retry on failure
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorCodesToAdd: null);
+            }));
 
-            // Register IUnitOfWork yet done !!!
-            //services.AddScoped<IUnitOfWork>(provider =>
-            //    provider.GetRequiredService<AppDbContext>());
+        // Register IUnitOfWork yet done !!!
+        //services.AddScoped<IUnitOfWork>(provider =>
+        //    provider.GetRequiredService<AppDbContext>());
 
-            return services;
-        }
+        return services;
     }
 }
+

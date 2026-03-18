@@ -1,8 +1,8 @@
-namespace LunchSync.Core.Common.Enums
+namespace LunchSync.Core.Common.Enums;
+
+public enum CollectionStatus
 {
-    public enum CollectionStatus
-    {
-        Active = 0, 
-        InActive = 1
-    }
+    Active = 0,
+    InActive = 1
 }
+

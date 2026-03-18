@@ -1,7 +1,7 @@
-namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
-using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Abstractions;
 using LunchSync.Core.Common.ValueObjects;
+
+namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 public  class Dish : BaseEntity
 {
     

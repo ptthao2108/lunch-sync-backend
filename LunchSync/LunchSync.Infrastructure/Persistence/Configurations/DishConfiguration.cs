@@ -1,6 +1,6 @@
+using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 
 namespace LunchSync.Infrastructure.Persistence.Configurations;
 

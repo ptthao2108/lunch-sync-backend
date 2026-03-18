@@ -1,6 +1,5 @@
 namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
-using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.Abstractions;
+
 public class RestaurantCollection
 {
     public Guid RestaurantId { get; set; }

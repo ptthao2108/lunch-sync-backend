@@ -1,8 +1,8 @@
-namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
-
-using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Abstractions;
+using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Modules.Auth.Entities;
+
+namespace LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 
 public class Submission : BaseEntity
 {

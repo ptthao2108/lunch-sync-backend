@@ -1,7 +1,8 @@
-using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Abstractions;
+using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Modules.Auth.Entities;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+
 namespace LunchSync.Core.Modules.Sessions.Entities;
 
 public class Session : BaseEntity

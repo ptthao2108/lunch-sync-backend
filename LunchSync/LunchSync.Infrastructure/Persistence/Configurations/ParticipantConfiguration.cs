@@ -1,9 +1,9 @@
+using LunchSync.Core.Modules.Sessions.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using LunchSync.Core.Modules.Sessions.Entities;
 
 namespace LunchSync.Infrastructure.Persistence.Configurations;
-//Bảng Participants
+
 public class ParticipantConfiguration : IEntityTypeConfiguration<Participant>
 {
     public void Configure(EntityTypeBuilder<Participant> builder)
