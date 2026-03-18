@@ -1,4 +1,4 @@
-﻿namespace LunchSync.Core.Common.Abstactions
+﻿namespace LunchSync.Core.Common.Abstractions
 {
     public abstract class BaseEntity
     {
