@@ -1,0 +1,72 @@
+name: Monorepo CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # 1. CI
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-dotnet: ${{ steps.filter.outputs.backend-dotnet }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Detect changed folders
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend-dotnet:
+              - 'backend-dotnet/**'
+            frontend:
+              - 'frontend/**'
+
+  # 2. .NET CI
+  dotnet-ci:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend-dotnet == 'true'
+    runs-on: ubuntu-latest
+    
+    # Root directory
+    defaults:
+      run:
+        working-directory: ./backend-dotnet 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Cache .NET NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('backend-dotnet/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # CHUỖI LỆNH THỰC THI (log error)
+      - name: Restore dependencies
+        run: dotnet restore LunchSync.sln
+
+      - name: Check Code Format (Clean Code)
+        # Phải format trước khi commit.
+        run: dotnet format LunchSync.sln --verify-no-changes
+
+      - name: Build project
+        run: dotnet build LunchSync.sln --configuration Release --no-restore
+
+      - name: Run Unit Tests
+        run: dotnet test LunchSync.sln --configuration Release --no-build --verbosity normal
