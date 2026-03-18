@@ -1,0 +1,17 @@
+using System.Text.Json;
+using LunchSync.Core.Modules.Sessions.Entities;
+using LunchSync.Core.Common.Enums;
+using LunchSync.Core.Common.ValueObjects;
+
+namespace LunchSync.Application.Caching;
+
+public interface ISessionCache
+{
+    Task<Pin> GenerateUniquePinAsync(Guid sessionId, int expireMinutes);
+    Task SaveActiveSessionAsync(Session session, int expireMinutes);
+    Task<Session?> GetActiveSessionByPinAsync(string pin);
+    Task UpdateStatusAndExpireAsync(string pin, SessionStatus newStatus, int expireMinutes);
+    Task<List<Participant>> GetParticipantsAsync(string pin);
+    Task RemoveSessionAsync(string pin);
+    Task<int> TryJoinAtomicAsync(string pin, Participant participant, int maxParticipants, int expireMinutes);
+}

@@ -14,10 +14,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="StackExchange.Redis" Version="2.12.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LunchSync.Core\LunchSync.Core.csproj" />
+     <ProjectReference Include="..\LunchSync.Application\LunchSync.Application.csproj" />
   </ItemGroup>
 
 </Project>

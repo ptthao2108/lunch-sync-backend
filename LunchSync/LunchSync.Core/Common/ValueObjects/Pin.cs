@@ -1,5 +1,5 @@
 ﻿using LunchSync.Core.Exceptions;
-
+using System.Security.Cryptography;
 namespace LunchSync.Core.Common.ValueObjects
 {
     public class Pin
@@ -22,10 +22,12 @@ namespace LunchSync.Core.Common.ValueObjects
 
         public static Pin Generate()
         {
-            // add your logic here!
-            return new Pin("000000");
+            string pinValue = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+            return new Pin(pinValue);
         }
 
         public override string ToString() => Value;
+        public override bool Equals(object? obj) => obj is Pin other && Value == other.Value;
+        public override int GetHashCode() => Value.GetHashCode();
     }
 }
