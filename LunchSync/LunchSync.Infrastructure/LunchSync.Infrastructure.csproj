@@ -19,8 +19,4 @@
     <ProjectReference Include="..\LunchSync.Core\LunchSync.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Configurations\" />
-  </ItemGroup>
-
 </Project>
