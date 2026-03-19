@@ -1,5 +1,6 @@
 ﻿using LunchSync.Core.Common.Interfaces;
 using LunchSync.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

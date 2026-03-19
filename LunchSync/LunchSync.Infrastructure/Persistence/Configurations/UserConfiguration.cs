@@ -1,5 +1,6 @@
-using LunchSync.Core.Common.Enums;
+﻿using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Modules.Auth.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

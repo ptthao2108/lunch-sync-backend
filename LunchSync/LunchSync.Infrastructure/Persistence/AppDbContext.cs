@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-using LunchSync.Core.Common.Interfaces;
+﻿using LunchSync.Core.Common.Interfaces;
 using LunchSync.Core.Modules.Auth.Entities;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 using LunchSync.Core.Modules.Sessions.Entities;
@@ -27,6 +25,6 @@ public class AppDbContext : DbContext, IUnitOfWork
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-    }   
+    }
 
 }

@@ -1,5 +1,6 @@
-using LunchSync.Core;
+﻿using LunchSync.Core;
 using LunchSync.Infrastructure;
+
 using Microsoft.OpenApi.Models;
 
 namespace LunchSync.Api
