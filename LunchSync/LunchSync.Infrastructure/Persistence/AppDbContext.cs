@@ -1,12 +1,15 @@
-﻿using LunchSync.Core.Modules.Auth.Entities;
+﻿using System.Reflection;
+
+using LunchSync.Core.Common.Interfaces;
+using LunchSync.Core.Modules.Auth.Entities;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
 using LunchSync.Core.Modules.Sessions.Entities;
+
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 
 namespace LunchSync.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IUnitOfWork
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -23,9 +26,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // Apply tất cả configurations từ assembly này
-        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-    }
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }   
 
 }
