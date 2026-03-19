@@ -1,4 +1,4 @@
-using LunchSync.Application.Caching;
+﻿using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.Sessions.Entities;
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.ValueObjects;
@@ -33,7 +33,8 @@ public class SessionCache : ISessionCache
                 TimeSpan.FromMinutes(expireMinutes),
                 When.NotExists);
 
-            if (isReserved) return candidatePin;
+            if (isReserved)
+            { return candidatePin; }
         }
         throw new BusinessRuleViolationException("Hệ thống hiện tại không thể tạo thêm mã PIN duy nhất.");
     }
@@ -70,7 +71,9 @@ public class SessionCache : ISessionCache
         var members = await _db.SetMembersAsync(setKey); //lay participant trong set
 
         if (members == null || members.Length == 0)
+        {
             return new List<Participant>();
+        }
 
         return members
             .Select(m => JsonSerializer.Deserialize<Participant>(m!)) // duyet tung chuoi json trong redis va giai ma nguoc lai thanh participant
@@ -82,7 +85,8 @@ public class SessionCache : ISessionCache
     {
         var key = RedisKeyBuilder.Data(pin);
         var data = await _db.HashGetAllAsync(key);
-        if (data.Length == 0) return null;
+        if (data.Length == 0)
+        { return null; }
 
         var dict = data.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
 
@@ -142,9 +146,9 @@ public class SessionCache : ISessionCache
         string luaScript = @"
             -- 0. Check if session exists
             if redis.call('EXISTS', KEYS[3]) == 0 then return 3 end
-            
+
             -- 1. check duplicated name
-            if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then return 1 end 
+            if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then return 1 end
 
             -- 2. Check count
             local currentCount = tonumber(redis.call('SCARD', KEYS[2]) or '0')

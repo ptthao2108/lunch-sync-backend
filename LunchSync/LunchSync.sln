@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunchSync.Core", "LunchSync
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunchSync.Infrastructure", "LunchSync.Infrastructure\LunchSync.Infrastructure.csproj", "{3F5F25F3-C1D0-4F59-912D-C55B6BA6EF06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunchSync.Application", "LunchSync.Application\LunchSync.Application.csproj", "{394EC723-55B5-4E3C-958E-F5FB25B7D92E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

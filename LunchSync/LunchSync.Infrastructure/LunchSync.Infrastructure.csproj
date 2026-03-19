@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LunchSync.Core\LunchSync.Core.csproj" />
-     <ProjectReference Include="..\LunchSync.Application\LunchSync.Application.csproj" />
   </ItemGroup>
 
 </Project>
