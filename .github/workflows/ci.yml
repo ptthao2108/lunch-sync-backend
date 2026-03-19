@@ -58,6 +58,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore LunchSync.sln
 
+      - name: Format Code
+        run: dotnet format LunchSync.sln
+
       - name: Check Code Format (Clean Code)
         # Phải format trước khi commit.
         run: dotnet format LunchSync.sln --verify-no-changes
