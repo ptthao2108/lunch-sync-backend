@@ -147,18 +147,22 @@ public class SessionCache : ISessionCache
             -- 0. Check if session exists
             if redis.call('EXISTS', KEYS[3]) == 0 then return 3 end
 
-            -- 1. check duplicated name
+            -- 1. Kiểm tra trạng thái phòng
+            local status = redis.call('HGET', KEYS[3], 'Status')
+            if status ~= '0' then return 4 end
+
+            -- 2. check duplicated name
             if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then return 1 end
 
-            -- 2. Check count
+            -- 3. Check count
             local currentCount = tonumber(redis.call('SCARD', KEYS[2]) or '0')
             if currentCount >= tonumber(ARGV[2]) then return 2  end
 
-            -- 3. Add (Atomic)
+            -- 4. Add (Atomic)
             redis.call('SADD', KEYS[1], ARGV[1]) -- Thêm tên
             redis.call('SADD', KEYS[2], ARGV[3]) -- participant
 
-            -- 4. Set TTL
+            -- 5. Set TTL
             local ttl = tonumber(ARGV[4])
             for i, key in ipairs(KEYS) do
                 redis.call('EXPIRE', key, ttl)
