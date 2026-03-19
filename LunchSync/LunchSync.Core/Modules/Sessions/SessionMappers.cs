@@ -5,13 +5,13 @@ namespace LunchSync.Core.Modules.Sessions;
 
 public static class SessionsMappers
 {
-    public static CreateSessionRes ToCreateSessionRes(this Session session, string collectionName, string shareLink)
+    public static CreateSessionRes ToCreateSessionRes(this Session session, string collectionName, string baseUrl)
     {
         return new CreateSessionRes
         {
             SessionId = session.Id,
             Pin = session.Pin,
-            ShareLink = shareLink,
+            ShareLink = $"{baseUrl}/{session.Pin}",
             Status = session.Status.ToString().ToLower(),
             CollectionName = collectionName
         };
@@ -34,6 +34,8 @@ public static class SessionsMappers
     {
         return new SessionStatusDto
         {
+            SessionId = session.Id,
+            Pin = session.Pin,
             Status = session.Status.ToString().ToLower(),
             ParticipantsJoined = session.Participants.Count,
             ParticipantsVoted = votedCount,

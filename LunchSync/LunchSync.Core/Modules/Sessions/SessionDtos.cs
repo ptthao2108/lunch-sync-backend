@@ -5,7 +5,7 @@ namespace LunchSync.Core.Modules.Sessions;
 
 public class CreateSessionReq
 {
-    public string? Hostname { get; set; }
+    public string Hostname { get; set; } = string.Empty;
     public Guid CollectionId { get; set; }
     public PriceTier PriceTier { get; set; }
 }
@@ -32,9 +32,11 @@ public class JoinRes
 }
 public class SessionStatusDto
 {
+    public Guid SessionId { get; set; }
+    public string Pin { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int ParticipantsJoined { get; set; }
-    public int ParticipantsVoted { get; set; }
+    public int? ParticipantsVoted { get; set; }
     public DateTime? VotingStartedAt { get; set; }
     public DateTime? BoomTriggeredAt { get; set; }
 }
