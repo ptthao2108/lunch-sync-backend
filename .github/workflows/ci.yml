@@ -6,15 +6,14 @@ on:
       - '**'
   pull_request:
     branches:
-      - main
+      - '**'
 
 jobs:
   # 1. CI
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      backend-dotnet: ${{ steps.filter.outputs.backend-dotnet }}
-      frontend: ${{ steps.filter.outputs.frontend }}
+      dotnet: ${{ steps.filter.outputs.dotnet }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,21 +23,19 @@ jobs:
         id: filter
         with:
           filters: |
-            backend-dotnet:
-              - 'backend-dotnet/**'
-            frontend:
-              - 'frontend/**'
+            dotnet:
+              - 'LunchSync/**'
 
   # 2. .NET CI
   dotnet-ci:
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend-dotnet == 'true'
+    if: needs.detect-changes.outputs.dotnet == 'true'
     runs-on: ubuntu-latest
     
     # Root directory
     defaults:
       run:
-        working-directory: ./backend-dotnet 
+        working-directory: ./LunchSync
 
     steps:
       - name: Checkout code
@@ -53,7 +50,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('backend-dotnet/**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('LunchSync/**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
