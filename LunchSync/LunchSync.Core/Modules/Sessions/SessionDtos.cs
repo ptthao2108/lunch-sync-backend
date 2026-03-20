@@ -39,4 +39,5 @@ public class SessionStatusDto
     public int? ParticipantsVoted { get; set; }
     public DateTime? VotingStartedAt { get; set; }
     public DateTime? BoomTriggeredAt { get; set; }
+    public bool IsHistory { get; set; } = false;
 }
