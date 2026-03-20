@@ -1,5 +1,6 @@
-using LunchSync.Core.Common.Enums;
+﻿using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,12 +14,12 @@ public class SubmissionConfiguration : IEntityTypeConfiguration<Submission>
 
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
-        
+
         builder.Property(s => s.RestaurantName).HasMaxLength(200).IsRequired();
         builder.Property(s => s.Address).IsRequired();
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20).HasDefaultValue(SubmissionStatus.Pending);
         builder.Property(s => s.PriceTier).HasConversion<string>().HasMaxLength(20);
-        
+
         // Khớp với DEFAULT NOW() trong SQL
         builder.Property(s => s.CreatedAt).HasColumnType("timestamp with time zone").HasDefaultValueSql("NOW()");
         builder.Property(s => s.ReviewedAt).HasColumnType("timestamp with time zone");
@@ -29,7 +30,7 @@ public class SubmissionConfiguration : IEntityTypeConfiguration<Submission>
             .WithMany(u => u.Submissions)
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         builder.HasOne(s => s.User)
                .WithMany()
                .HasForeignKey(s => s.ReviewedBy)

@@ -1,4 +1,5 @@
-using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+﻿using LunchSync.Core.Modules.RestaurantsAndDishes.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace LunchSync.Infrastructure.Persistence.Configurations;
@@ -17,7 +18,8 @@ public class RestaurantDishConfiguration :
         builder.HasOne(rd => rd.Restaurant)
             .WithMany(r => r.RestaurantDishes)
             .HasForeignKey(rd => rd.RestaurantId)
-            .OnDelete(DeleteBehavior.Cascade); ;
+            .OnDelete(DeleteBehavior.Cascade);
+        ;
 
         builder.HasOne(rd => rd.Dish)
             .WithMany(d => d.RestaurantDishes)

@@ -1,8 +1,6 @@
-﻿namespace LunchSync.Core.Common.Interfaces
+﻿namespace LunchSync.Core.Common.Interfaces;
+public interface IUnitOfWork : IDisposable
 {
-    public interface IUnitOfWork : IDisposable
-    {
-        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    }
 }

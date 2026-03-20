@@ -1,4 +1,5 @@
-using LunchSync.Core.Modules.Sessions.Entities;
+﻿using LunchSync.Core.Modules.Sessions.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

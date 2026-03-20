@@ -29,6 +29,6 @@ public class Session : BaseEntity
     //Navigation
     public User Host { get; set; } = null!;
     public Collection Collection { get; set; } = null!;
-    public Restaurant Restaurant{ get; set; } = null!;
+    public Restaurant Restaurant { get; set; } = null!;
     public ICollection<Participant> Participants { get; set; } = new List<Participant>();
 }

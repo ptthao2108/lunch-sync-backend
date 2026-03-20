@@ -2,7 +2,6 @@
 using System.Security.Cryptography;
 
 namespace LunchSync.Core.Common.ValueObjects;
-
 public class Pin
 {
     public string Value { get; private set; }
