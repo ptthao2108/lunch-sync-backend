@@ -23,7 +23,6 @@ public class Session : BaseEntity
 
     public Guid? FinalRestaurantId { get; set; }
     public DateTime? VotingStartedAt { get; set; }
-    public DateTime? BoomTriggeredAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
 
     //Navigation
