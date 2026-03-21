@@ -21,7 +21,6 @@ public class CreateSessionRes
 
 public class JoinReq
 {
-    public string Pin { get; set; } = string.Empty;
     public string Nickname { get; set; } = string.Empty;
 }
 public class JoinRes
@@ -63,15 +62,15 @@ public class SessionInfoDto
 
 public class SessionStartRes
 {
-    public SessionStatus Status { get; set; }
+    public string Status { get; set; } = string.Empty;
     public int ParticipantCount { get; set; }
-    public DateTime VotingStartedAt { get; set; }
+    public DateTime? VotingStartedAt { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 
 public class SessionCloseVotingRes
 {
-    public SessionStatus Status { get; set; }
+    public string Status { get; set; } = string.Empty;
     public int TotalVoted { get; set; }
     public int TotalParticipants { get; set; }
     public string Message { get; set; } = string.Empty;
