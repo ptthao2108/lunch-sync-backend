@@ -29,7 +29,7 @@ public class JoinRes
     public Guid ParticipantId { get; set; }
     public Guid SessionId { get; set; }
     public string Nickname { get; set; } = string.Empty;
-    public List<Participant> Participants { get; set; } = new List<Participant>();
+    public List<ParticipantDto> Participants { get; set; } = new List<ParticipantDto>();
 }
 public class SessionStatusDto
 {
@@ -37,6 +37,12 @@ public class SessionStatusDto
     public int ParticipantsJoined { get; set; }
     public int? ParticipantsVoted { get; set; }
     public DateTime? VotingStartedAt { get; set; }
+}
+public class ParticipantDto
+{
+    public string Nickname { get; set; } = string.Empty;
+    public DateTime JoinedAt { get; set; }
+    public bool? IsHost { get; set; }
 }
 
 public class SessionInfoDto
@@ -46,13 +52,13 @@ public class SessionInfoDto
     public string Status { get; set; } = string.Empty;
     public string HostName { get; set; } = string.Empty;
     public string CollectionName { get; set; } = string.Empty;
-    public PriceTier PriceTier { get; set; }
+    public string PriceTier { get; set; } = string.Empty;
     public string PriceDisplay { get; set; } = string.Empty;
-    public List<Participant> Participants { get; set; } = new List<Participant>();
+    public List<ParticipantDto> Participants { get; set; } = new List<ParticipantDto>();
     //nickname, joinedat, ishost
     public int ParticipantCount { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime ExpiredAt { get; set; }
+    public DateTime? ExpiredAt { get; set; }
 }
 
 public class SessionStartRes
