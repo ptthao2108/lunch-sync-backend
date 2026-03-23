@@ -6,5 +6,5 @@ public interface IPinManager
     Task<string> GetUnusedPinAsync();
 
     // Đưa PIN trở lại Pool khi Session kết thúc
-    Task ReleasePinAsync(string pin);
+    Task<bool> ReleasePinAsync(string pin);
 }
