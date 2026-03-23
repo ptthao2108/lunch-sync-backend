@@ -6,7 +6,7 @@ public interface ISessionService
 {
     Task<CreateSessionRes> CreateSessionAsync(CreateSessionReq request, Guid HostId);
     Task<JoinRes> JoinSessionAsync(string pin, JoinReq request);
-    Task<SessionStatusDto> StartSessionAsync(string pin);
-    Task<SessionStatusDto> CancelSessionAsync(string pin, Guid hostId);
-    Task<SessionStatusDto> CompleteSessionAsync(string pin);
+    Task<SessionStartRes> StartSessionAsync(string pin, Guid hostId);
+    Task CancelSessionAsync(string pin, Guid hostId);
+    Task<SessionCloseVotingRes> CompleteSessionAsync(string pin, Guid hostId);
 }
