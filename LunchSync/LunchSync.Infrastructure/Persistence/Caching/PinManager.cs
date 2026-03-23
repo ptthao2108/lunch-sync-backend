@@ -19,7 +19,7 @@ public class PinManager : IPinManager
         _db = redis.GetDatabase();
     }
 
-    public async Task<string> GetUnusedPinAsync()
+    public async Task<string> GetUnusedPinAsync(Guid sessionId)
     {
         var poolKey = RedisKeyBuilder.PinAvailablePool();
         //Lấy từ pool: SPOP (lấy PIN) -> Nếu có thì SET session:{pin}:data "reserved" EX 30
@@ -27,14 +27,14 @@ public class PinManager : IPinManager
             local pin = redis.call('SPOP', KEYS[1])
             if pin then
                 local sessionKey = 'session:' .. pin .. ':data'
-                redis.call('SET', sessionKey, 'reserved', 'EX', ARGV[1])
+                redis.call('SET', sessionKey, 'ARGV[2]', 'EX', ARGV[1])
                 return pin
             end
             return nil"; //null
 
         var result = await _db.ScriptEvaluateAsync(luaScript,
             new RedisKey[] { poolKey },
-            new RedisValue[] { LockSeconds });
+            new RedisValue[] { LockSeconds, sessionId.ToString() });
 
         if (!result.IsNull)
         {
@@ -48,7 +48,7 @@ public class PinManager : IPinManager
 
             bool isReserved = await _db.StringSetAsync(
                 sessionKey,
-                "reserved",
+                sessionId.ToString(),
                 TimeSpan.FromSeconds(LockSeconds),
                 When.NotExists); //Chỉ đặt nếu key chưa tồn tại, k đè lên Session đang Active hoặc đang Reserved
 
