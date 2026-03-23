@@ -34,7 +34,7 @@ public class SessionStatusDto
 {
     public string Status { get; set; } = string.Empty;
     public int ParticipantsJoined { get; set; }
-    public int? ParticipantsVoted { get; set; }
+    public int ParticipantsVoted { get; set; }
     public DateTime? VotingStartedAt { get; set; }
 }
 public class ParticipantDto

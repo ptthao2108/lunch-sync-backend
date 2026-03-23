@@ -31,17 +31,17 @@ public static class SessionsMappers
             }).ToList()
         };
     }
-    public static SessionStatusDto ToStatusDto(this Session session, int votedCount)
+    public static SessionStatusDto ToStatusDto(this Session session)
     {
         return new SessionStatusDto
         {
             Status = session.Status.ToString().ToLower(),
             ParticipantsJoined = session.Participants.Count,
-            ParticipantsVoted = votedCount,
+            ParticipantsVoted = session.GroupVector?.Count ?? 0,
             VotingStartedAt = session.VotingStartedAt
         };
     }
-    public static SessionInfoDto ToInfoDto(this Session session, int votedCount)
+    public static SessionInfoDto ToInfoDto(this Session session)
     {
         return new SessionInfoDto
         {
@@ -75,14 +75,14 @@ public static class SessionsMappers
             Message = $"Bắt đầu bỏ phiếu vs {session.Participants.Count} người"
         };
     }
-    public static SessionCloseVotingRes ToCloseVotingRes(this Session session, int votedCount)
+    public static SessionCloseVotingRes ToCloseVotingRes(this Session session)
     {
         return new SessionCloseVotingRes
         {
             Status = session.Status.ToString().ToLower(),
             TotalParticipants = session.Participants.Count,
-            TotalVoted = votedCount,
-            Message = $"Scoring với {votedCount} người đã vote"
+            TotalVoted = session.GroupVector?.Count ?? 0,
+            Message = $"Scoring với {session.GroupVector?.Count ?? 0} người đã vote"
         };
     }
 }
