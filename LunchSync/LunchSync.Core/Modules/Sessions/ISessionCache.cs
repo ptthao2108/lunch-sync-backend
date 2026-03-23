@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+
 using LunchSync.Core.Modules.Sessions.Entities;
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.ValueObjects;
@@ -7,7 +8,6 @@ namespace LunchSync.Core.Modules.Sessions;
 
 public interface ISessionCache
 {
-    Task<Pin> GenerateUniquePinAsync(Guid Id, int expireMinutes);
     Task SaveActiveSessionAsync(Session session, int expireMinutes);
     Task<Session?> GetActiveSessionByPinAsync(string pin);
     Task UpdateStatusAndExpireAsync(string pin, SessionStatus newStatus, int expireMinutes);

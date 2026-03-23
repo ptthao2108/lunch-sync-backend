@@ -1,47 +1,33 @@
 ﻿using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.Sessions.Entities;
 using LunchSync.Core.Common.Enums;
-using LunchSync.Core.Common.ValueObjects;
+
 using StackExchange.Redis;
+
 using System.Text.Json;
-using LunchSync.Core.Exceptions;
 
 namespace LunchSync.Infrastructure.Persistence.Caching;
 
 public class SessionCache : ISessionCache
 {
-    private readonly IConnectionMultiplexer _redis;
     private readonly IDatabase _db;
-    private const int MaxRetries = 10;
+    private readonly IPinManager _pinManager;
 
-    public SessionCache(IConnectionMultiplexer redis)
+    public SessionCache(IConnectionMultiplexer redis, IPinManager pinManager)
     {
-        _redis = redis;
         _db = redis.GetDatabase();
-    }
-
-    public async Task<Pin> GenerateUniquePinAsync(Guid sessionId, int expireMinutes)
-    {
-        for (int i = 0; i < MaxRetries; i++)
-        {
-            var candidatePin = Pin.Generate();
-            string key = RedisKeyBuilder.Data(candidatePin.Value);
-
-            bool isReserved = await _db.StringSetAsync(
-                key,
-                sessionId.ToString(),
-                TimeSpan.FromMinutes(expireMinutes),
-                When.NotExists);
-
-            if (isReserved)
-            { return candidatePin; }
-        }
-        throw new BusinessRuleViolationException("Hệ thống hiện tại không thể tạo thêm mã PIN duy nhất.");
+        _pinManager = pinManager;
     }
 
     public async Task SaveActiveSessionAsync(Session session, int expireMinutes)
     {
         var key = RedisKeyBuilder.Data(session.Pin);
+        var participantKey = RedisKeyBuilder.Participants(session.Pin);
+        var nameKey = RedisKeyBuilder.Names(session.Pin);
+
+        //xóa set participants và names cũ
+        await _db.KeyDeleteAsync(new RedisKey[] { participantKey, nameKey });
+
         var entries = new HashEntry[]
         {
         new("Id", session.Id.ToString()),
@@ -54,9 +40,6 @@ public class SessionCache : ISessionCache
         };
 
         await _db.HashSetAsync(key, entries);
-
-        var participantKey = RedisKeyBuilder.Participants(session.Pin);
-        var nameKey = RedisKeyBuilder.Names(session.Pin);
 
         // Set TTL cho tất cả các key liên quan
         var ttl = TimeSpan.FromMinutes(expireMinutes);
@@ -134,7 +117,7 @@ public class SessionCache : ISessionCache
     {
 
         var participantJson = JsonSerializer.Serialize(participant);
-        var NickName = participant.Nickname.ToLower().Trim();
+        var nickname = participant.Nickname.ToLower().Trim();
 
         var keys = new RedisKey[]
         {
@@ -172,10 +155,9 @@ public class SessionCache : ISessionCache
         ";
 
         var result = await _db.ScriptEvaluateAsync(luaScript, keys,
-            new RedisValue[] { NickName, maxParticipants, participantJson, expireMinutes * 60 });
+            new RedisValue[] { nickname, maxParticipants, participantJson, expireMinutes * 60 });
         // ARG[1]   ARG[2]           ARG[3]           ARG[4]
 
         return (int)result;
     }
-
 }
