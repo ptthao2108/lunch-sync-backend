@@ -8,5 +8,6 @@ public interface ISessionService
     Task<JoinRes> JoinSessionAsync(string pin, JoinReq request);
     Task<SessionStartRes> StartSessionAsync(string pin, Guid hostId);
     Task CancelSessionAsync(string pin, Guid hostId);
-    Task<SessionCloseVotingRes> CompleteSessionAsync(string pin, Guid hostId);
+    Task<Session?> GetSessionAsync(string pin);
+    Task<Session?> GetSessionHistoryAsync(Guid sessionId);
 }

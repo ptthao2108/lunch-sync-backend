@@ -25,7 +25,7 @@ public class SessionService : ISessionService
         _configuration = configuration;
         _pinManager = pinManager;
     }
-
+    //command Post => return DTO
     public async Task<CreateSessionRes> CreateSessionAsync(CreateSessionReq request, Guid HostId)
     {
         //var collection = await _collectionRepository.GetByIdAsync(request.CollectionId);
@@ -119,48 +119,16 @@ public class SessionService : ISessionService
             await _pinManager.ReleasePinAsync(pin);
         }
     }
-    public async Task<SessionCloseVotingRes> CompleteSessionAsync(string pin, Guid hostId)
+
+    //GET status+info => Object Session
+    public async Task<Session?> GetSessionAsync(string pin) => await _cache.GetActiveSessionByPinAsync(pin);
+
+    //GET Session trong db
+    public async Task<Session?> GetSessionHistoryAsync(Guid sessionId)
     {
-        var session = await _cache.GetActiveSessionByPinAsync(pin)
-                              ?? throw new BusinessRuleViolationException("Phòng không tồn tại.");
-        if (session == null)
-        {
-            return new SessionCloseVotingRes
-            {
-                Status = SessionStatus.Done.ToString()
-            };
-        }
-        if (session.HostId != hostId)
-            throw new BusinessRuleViolationException("Chỉ chủ phòng mới có quyền.");
-
-
-        var participants = await _cache.GetParticipantsAsync(pin);
-        var historyEntity = new Session
-        {
-            Id = session.Id,
-            Pin = pin,
-            HostId = hostId,
-            CollectionId = session.CollectionId,
-            PriceTier = session.PriceTier,
-            Status = SessionStatus.Done,
-            GroupVector = session.GroupVector,
-            TopDishIds = session.TopDishIds,
-            TopRestaurantIds = session.TopRestaurantIds,
-            BoomEliminatedIds = session.BoomEliminatedIds,
-            FinalRestaurantId = session.FinalRestaurantId,
-            VotingStartedAt = session.VotingStartedAt,
-            CreatedAt = session.CreatedAt,
-            ExpiresAt = session.ExpiresAt,
-        };
-        // save to db
-        await _repository.SaveHistoryAsync(historyEntity);
-
-        // remove cache, add to pin pool
-        await _cache.RemoveSessionAsync(pin);
-        await _pinManager.ReleasePinAsync(pin);
-
-        return historyEntity.ToCloseVotingRes(historyEntity.GroupVector?.Count ?? 0);
-
+        // Truy cập DB để lấy dữ liệu lịch sử
+        var history = await _repository.GetHistoryByIdAsync(sessionId) ?? throw new BusinessRuleViolationException("Không tìm thấy thông tin lịch sử của phiên này.");
+        return history;
     }
 
 }
