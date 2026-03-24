@@ -27,7 +27,8 @@ public class PinManager : IPinManager
             local pin = redis.call('SPOP', KEYS[1])
             if pin then
                 local sessionKey = 'session:' .. pin .. ':data'
-                redis.call('SET', sessionKey, 'ARGV[2]', 'EX', ARGV[1])
+                redis.call('HSET', sessionKey, 'Id', ARGV[2])
+                redis.call('EXPIRE', sessionKey, ARGV[1])
                 return pin
             end
             return nil"; //null
@@ -46,14 +47,22 @@ public class PinManager : IPinManager
             var candidatePin = Pin.Generate().Value;
             var sessionKey = RedisKeyBuilder.Data(candidatePin);
 
-            bool isReserved = await _db.StringSetAsync(
-                sessionKey,
-                sessionId.ToString(),
-                TimeSpan.FromSeconds(LockSeconds),
-                When.NotExists); //Chỉ đặt nếu key chưa tồn tại, k đè lên Session đang Active hoặc đang Reserved
+            string checkAndSetScript = @"
+            if redis.call('EXISTS', KEYS[1]) == 0 then
+                redis.call('HSET', KEYS[1], 'Id', ARGV[2])
+                redis.call('EXPIRE', KEYS[1], ARGV[1])
+                return 1
+            end
+            return 0";
 
-            if (isReserved)
-            { return candidatePin; }
+            var isReserved = await _db.ScriptEvaluateAsync(checkAndSetScript,
+                new RedisKey[] { sessionKey },
+                new RedisValue[] { LockSeconds, sessionId.ToString() });
+
+            if ((int)isReserved == 1)
+            {
+                return candidatePin;
+            }
         }
         throw new BusinessRuleViolationException("Hệ thống hiện tại không thể tạo thêm mã PIN duy nhất.");
     }
