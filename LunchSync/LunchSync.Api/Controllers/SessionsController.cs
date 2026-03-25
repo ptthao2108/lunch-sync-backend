@@ -48,6 +48,15 @@ public class SessionsController : ControllerBase
         return Ok(result);
     }
 
+    // POST: /sessions/{pin}/cancel  - Hủy session [Auth: Host]
+    [HttpPost("{pin}/cancel")]
+    public async Task<IActionResult> CancelAsync([FromRoute] string pin)
+    {
+        // Giả sử HostId được lấy từ Token/Identity. Ở đây tạm lấy từ Header hoặc Guid mẫu.
+        var hostId = Guid.NewGuid();
+        await _sessionService.CancelSessionAsync(pin, hostId);
+        return Ok();
+    }
 
     // GET: /sessions/{pin} - Lấy session status [Public]
     [AllowAnonymous]
