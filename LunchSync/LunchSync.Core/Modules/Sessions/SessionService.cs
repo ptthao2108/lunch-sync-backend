@@ -71,13 +71,13 @@ public class SessionService : ISessionService
         switch (result)
         {
             case 1:
-                throw new NicknameTakenException(request.Nickname);
+                throw new BusinessRuleViolationException("Tên hiển thị này đã có người sử dụng.");
             case 2:
-                throw new SessionFullException();
+                throw new BusinessRuleViolationException("Phòng đã đầy.");
             case 3:
-                throw new SessionNotFoundException(pin);
+                throw new BusinessRuleViolationException("Phòng không tồn tại.");
             case 4:
-                throw new SessionAlreadyStartedException();
+                throw new BusinessRuleViolationException("Phòng đã bắt đầu hoặc kết thúc.");
             case 0:
                 break;
             default:
@@ -85,7 +85,7 @@ public class SessionService : ISessionService
         }
 
         var session = await _cache.GetActiveSessionByPinAsync(pin)
-                      ?? throw new SessionNotFoundException(pin);
+                      ?? throw new BusinessRuleViolationException("Không thể lấy thông tin phòng.");
 
         session.Participants = await _cache.GetParticipantsAsync(pin);
 
@@ -94,16 +94,16 @@ public class SessionService : ISessionService
     public async Task<SessionStartRes> StartSessionAsync(string pin, Guid hostId)
     {
         var session = await _cache.GetActiveSessionByPinAsync(pin)
-                      ?? throw new SessionNotFoundException(pin);
+                      ?? throw new BusinessRuleViolationException("Phòng không tồn tại.");
 
         if (session.Status != SessionStatus.Waiting)
-            throw new SessionAlreadyStartedException();
+            throw new BusinessRuleViolationException("Phòng đã bắt đầu.");
         if (session.HostId != hostId)
-            throw new NotHostException();
+            throw new BusinessRuleViolationException("Chỉ chủ phòng mới có quyền bắt đầu.");
 
         var participants = await _cache.GetParticipantsAsync(pin);
         if (participants.Count < MinParticipants)
-            throw new InsufficientParticipantsException(MinParticipants, participants.Count);
+            throw new BusinessRuleViolationException($"Cần ít nhất {MinParticipants} người để bắt đầu.");
 
         // Cập nhật trạng thái sang Voting và gia hạn thời gian
         await _cache.UpdateStatusAndExpireAsync(pin, SessionStatus.Voting, VotingExpiryMinutes);
@@ -112,21 +112,23 @@ public class SessionService : ISessionService
     }
     public async Task CancelSessionAsync(string pin, Guid hostId)
     {
-        var session = await _cache.GetActiveSessionByPinAsync(pin) ?? throw new SessionNotFoundException(pin);
-        if (session.HostId != hostId)
+        var session = await _cache.GetActiveSessionByPinAsync(pin);
+        if (session != null && session.HostId == hostId)
         {
-            throw new NotHostException();
+            await _cache.RemoveSessionAsync(pin);
+            await _pinManager.ReleasePinAsync(pin);
         }
-        await _cache.RemoveSessionAsync(pin);
-        await _pinManager.ReleasePinAsync(pin);
     }
 
     //GET status+info => Object Session
-    public async Task<Session?> GetSessionAsync(string pin)
-    => await _cache.GetActiveSessionByPinAsync(pin);
+    public async Task<Session?> GetSessionAsync(string pin) => await _cache.GetActiveSessionByPinAsync(pin);
 
     //GET Session trong db
     public async Task<Session?> GetSessionHistoryAsync(Guid sessionId)
-    => await _repository.GetHistoryByIdAsync(sessionId);
+    {
+        // Truy cập DB để lấy dữ liệu lịch sử
+        var history = await _repository.GetHistoryByIdAsync(sessionId) ?? throw new BusinessRuleViolationException("Không tìm thấy thông tin lịch sử của phiên này.");
+        return history;
+    }
 
 }

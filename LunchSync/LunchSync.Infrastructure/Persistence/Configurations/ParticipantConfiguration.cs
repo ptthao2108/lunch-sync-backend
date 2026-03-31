@@ -11,54 +11,24 @@ public class ParticipantConfiguration : IEntityTypeConfiguration<Participant>
     {
         builder.ToTable("participants");
         builder.HasKey(e => e.Id);
-        builder.Property(e => e.Id)
-            .HasColumnName("id")
-            .HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(p => p.SessionId)
-               .HasColumnName("session_id")
-               .IsRequired();
+        builder.Property(e => e.Nickname).IsRequired().HasMaxLength(20);
 
-        // FK tới users(id), nullable
-        builder.Property(p => p.UserId)
-               .HasColumnName("user_id")
-               .IsRequired(false);
-        builder.HasOne(p => p.User)
-               .WithMany()
-               .HasForeignKey(p => p.UserId)
-               .IsRequired(false)
-               .OnDelete(DeleteBehavior.SetNull);
+        // Quan hệ 1-N: Một Session có nhiều Participants
+        builder.HasOne(p => p.Session) //1 session
+                      .WithMany(s => s.Participants) //Session nhieu Participants
+                      .HasForeignKey(p => p.SessionId)
+                      .IsRequired()
+                      .OnDelete(DeleteBehavior.Cascade); // Xóa Session thì xóa sạch Participant
 
-        builder.Property(p => p.Nickname)
-               .HasColumnName("nickname")
-               .IsRequired()
-               .HasMaxLength(20);
+        builder.HasIndex(e => new { e.SessionId, e.Nickname }).IsUnique();
+        builder.HasIndex(e => e.SessionId).HasDatabaseName("idx_participants_session");
 
-        builder.Property(p => p.PrefVector)
-               .HasColumnName("pref_vector")
-               .HasColumnType("jsonb");
+        builder.Property(e => e.PrefVector).HasColumnType("jsonb");
 
-        builder.Property(p => p.VotedAt)
-               .HasColumnName("voted_at")
-               .HasColumnType("timestamp with time zone");
-
-        builder.Property(p => p.JoinedAt)
-               .HasColumnName("joined_at")
-               .IsRequired()
-               .HasColumnType("timestamp with time zone")
-               .HasDefaultValueSql("NOW()");
-
-        builder.HasIndex(p => new { p.SessionId, p.Nickname })
-               .IsUnique();
-
-        builder.HasIndex(p => p.SessionId)
-               .HasDatabaseName("idx_participants_session");
-
-        builder.HasOne(p => p.Session)
-               .WithMany(s => s.Participants)
-               .HasForeignKey(p => p.SessionId)
-               .IsRequired()
-               .OnDelete(DeleteBehavior.Cascade);
+        builder.Property(e => e.JoinedAt).IsRequired().HasColumnType("timestamp with time zone").HasDefaultValueSql("NOW()");
+        builder.Property(e => e.VotedAt).HasColumnType("timestamp with time zone");
 
     }
 }

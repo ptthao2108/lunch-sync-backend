@@ -1,5 +1,4 @@
 ﻿using LunchSync.Core.Common.Abstractions;
-using LunchSync.Core.Modules.Auth.Entities;
 
 namespace LunchSync.Core.Modules.Sessions.Entities;
 
@@ -17,5 +16,4 @@ public class Participant : BaseEntity
 
     //navigation
     public Session Session { get; set; } = null!;
-    public User User { get; set; } = null!;
 }
