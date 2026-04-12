@@ -4,44 +4,43 @@ using LunchSync.Core.Modules.Auth;
 using LunchSync.Core.Modules.Auth.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LunchSync.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
     private readonly ICurrentUserService _currentUser;
     private readonly IAuthService _authService;
-    private readonly IGuestTokenService _guestTokenService;
 
     public AuthController(
         ICurrentUserService currentUser,
-        IAuthService authService,
-        IGuestTokenService guestTokenService)
+        IAuthService authService)
     {
         _currentUser = currentUser;
         _authService = authService;
-        _guestTokenService = guestTokenService;
     }
 
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.CognitoUser)]
     [HttpGet("me")]
     public IActionResult Me()
     {
         if (!_currentUser.IsAuthenticated)
             return Unauthorized();
 
-        // Tra ve principal da duoc chuan hoa sau khi auth xong.
-        return Ok(new CurrentActorResponse(
-            _currentUser.UserId,
+        return Ok(new CurrentUserResponse(
+            _currentUser.LocalUserId,
+            _currentUser.CognitoSub,
             _currentUser.Email,
             _currentUser.Name,
-            _currentUser.ActorType,
-            _currentUser.Roles));
+            _currentUser.Role,
+            _currentUser.IsActive));
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth-public")]
     [HttpPost("register")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -49,21 +48,14 @@ public sealed class AuthController : ControllerBase
         [FromBody] RegisterRequest? request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            // Public register se tao user tren Cognito va tao local user cho app.
-            var response = await _authService.RegisterAsync(
-                request ?? new RegisterRequest(string.Empty, string.Empty, null),
-                cancellationToken);
-            return StatusCode(StatusCodes.Status201Created, response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ValidationProblem(detail: ex.Message);
-        }
+        var response = await _authService.RegisterAsync(
+            request ?? new RegisterRequest(string.Empty, string.Empty, null),
+            cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, response);
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth-public")]
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -71,51 +63,10 @@ public sealed class AuthController : ControllerBase
         [FromBody] LoginRequest? request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            // Login se lay token tu Cognito va dong bo local user neu can.
-            var response = await _authService.LoginAsync(
-                request ?? new LoginRequest(string.Empty, string.Empty),
-                cancellationToken);
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ValidationProblem(detail: ex.Message);
-        }
-    }
-
-    [Authorize(Policy = AuthPolicies.CognitoUser)]
-    [HttpGet("registration-status")]
-    [ProducesResponseType(typeof(RegistrationStatusResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RegistrationStatus(CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
-            return Unauthorized();
-
-        var response = await _authService.GetRegistrationStatusAsync(_currentUser.UserId, cancellationToken);
+        var response = await _authService.LoginAsync(
+            request ?? new LoginRequest(string.Empty, string.Empty),
+            cancellationToken);
         return Ok(response);
     }
 
-    [AllowAnonymous]
-    [HttpPost("guest-token")]
-    public IActionResult IssueGuestToken([FromBody] GuestAccessTokenRequest? request)
-    {
-        if (request is null)
-        {
-            return ValidationProblem(detail: "Guest token request body is required.");
-        }
-
-        try
-        {
-            // Guest token duoc cap rieng de client guest goi cac endpoint public/guest.
-            var response = _guestTokenService.IssueToken(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ValidationProblem(detail: ex.Message);
-        }
-    }
 }

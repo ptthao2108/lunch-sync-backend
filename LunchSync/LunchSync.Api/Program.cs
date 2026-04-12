@@ -1,10 +1,12 @@
-﻿using LunchSync.Api.Authentication;
+using System.Threading.RateLimiting;
+using LunchSync.Api.Authentication;
 using LunchSync.Api.Middleware;
-using LunchSync.Api.Services;
+using LunchSync.Api.Swagger;
 using LunchSync.Core;
 using LunchSync.Core.Common.Auth;
 using LunchSync.Core.Common.Interfaces;
 using LunchSync.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 using LunchSync.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
@@ -37,19 +39,25 @@ public class Program
         });
 
         builder.Services.AddEndpointsApiExplorer();
-        // Cau hinh auth theo JWT cho host/user va guest.
+        // Cau hinh auth theo JWT cho user va guest.
         builder.Services.AddLunchSyncAuthentication(builder.Configuration);
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddFixedWindowLimiter("auth-public", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 5;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueLimit = 0;
+                limiterOptions.AutoReplenishment = true;
+            });
+        });
 
         builder.Services.AddAuthorization(options =>
         {
             options.AddPolicy(AuthPolicies.CognitoUser, policy =>
             {
                 policy.RequireClaim(AuthClaimTypes.ActorType, AuthActorTypes.User);
-            });
-
-            options.AddPolicy(AuthPolicies.Guest, policy =>
-            {
-                policy.RequireClaim(AuthClaimTypes.ActorType, AuthActorTypes.Guest);
             });
         });
 
@@ -73,16 +81,10 @@ public class Program
                 Scheme = "bearer",
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Description = "Host/User token gui bang Authorization: Bearer <token>."
+                Description = "User token gui bang Authorization: Bearer <token>."
             });
 
-            options.AddSecurityDefinition("GuestToken", new OpenApiSecurityScheme
-            {
-                Name = AuthHeaderNames.GuestToken,
-                Type = SecuritySchemeType.ApiKey,
-                In = ParameterLocation.Header,
-                Description = "Guest JWT issued by POST /api/auth/guest-token."
-            });
+            options.OperationFilter<AuthorizeOperationFilter>();
         });
 
         var app = builder.Build();
@@ -120,6 +122,9 @@ public class Program
 
         // Gom loi domain/unhandled ve mot format response thong nhat.
         app.UseGlobalExceptionHandler();
+
+        app.UseRateLimiter();
+
         app.UseCors("AllowFrontend");
         // Xac thuc truoc, phan quyen sau.
         app.UseAuthentication();

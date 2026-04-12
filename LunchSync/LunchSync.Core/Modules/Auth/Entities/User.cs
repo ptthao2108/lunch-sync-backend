@@ -9,6 +9,6 @@ public class User : BaseEntity
     public string Email { get; set; } = null!;
     public string? FullName { get; set; }
     public UserRole Role { get; set; } = UserRole.User;
-    public Boolean IsActive { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 
 }

@@ -1,18 +1,15 @@
 using System.Security.Claims;
-using System.Text;
 using LunchSync.Core.Common.Auth;
-using Microsoft.AspNetCore.Authentication;
+using LunchSync.Core.Modules.Auth.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 namespace LunchSync.Api.Authentication;
 
 public static class JwtAuthenticationExtensions
 {
-    // Combined scheme giup app tu chon host JWT hay guest JWT theo header.
-    public const string CombinedScheme = "CombinedJwt";
     public const string CognitoScheme = "CognitoJwt";
-    public const string GuestScheme = "GuestJwt";
 
     public static IServiceCollection AddLunchSyncAuthentication(
         this IServiceCollection services,
@@ -22,28 +19,10 @@ public static class JwtAuthenticationExtensions
         var cognitoClientId = configuration["Cognito:ClientId"];
         var expectedTokenUse = configuration["Cognito:TokenUse"] ?? "id";
 
-        var guestIssuer = configuration["GuestTokens:Issuer"] ?? "LunchSync.Api";
-        var guestAudience = configuration["GuestTokens:Audience"] ?? "LunchSync.Guests";
-        var guestSigningKey = configuration["GuestTokens:SigningKey"]
-            ?? "change-me-to-a-long-random-secret-with-at-least-32-chars";
-
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = CombinedScheme;
-            options.DefaultChallengeScheme = CombinedScheme;
-        })
-        .AddPolicyScheme(CombinedScheme, CombinedScheme, options =>
-        {
-            options.ForwardDefaultSelector = context =>
-            {
-                // Guest gui token qua header rieng, con lai mac dinh la bearer token.
-                if (context.Request.Headers.ContainsKey(AuthHeaderNames.GuestToken))
-                {
-                    return GuestScheme;
-                }
-
-                return CognitoScheme;
-            };
+            options.DefaultAuthenticateScheme = CognitoScheme;
+            options.DefaultChallengeScheme = CognitoScheme;
         })
         .AddJwtBearer(CognitoScheme, options =>
         {
@@ -58,19 +37,18 @@ public static class JwtAuthenticationExtensions
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(2),
-                NameClaimType = "name",
-                RoleClaimType = "cognito:groups"
+                NameClaimType = AuthClaimTypes.FullName,
+                RoleClaimType = AuthClaimTypes.Role
             };
             options.Events = new JwtBearerEvents
             {
-                OnTokenValidated = context =>
+                OnTokenValidated = async context =>
                 {
-                    // Them actor type de policy dung chung cho host va guest.
                     var identity = context.Principal?.Identity as ClaimsIdentity;
                     if (identity is null)
                     {
                         context.Fail("Missing identity.");
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     var tokenUse = context.Principal?.FindFirst("token_use")?.Value;
@@ -81,7 +59,7 @@ public static class JwtAuthenticationExtensions
                     if (tokenUse != expectedTokenUse || string.IsNullOrWhiteSpace(subject))
                     {
                         context.Fail("Invalid Cognito token.");
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     if (!string.IsNullOrWhiteSpace(cognitoClientId)
@@ -89,7 +67,15 @@ public static class JwtAuthenticationExtensions
                         && clientId != cognitoClientId)
                     {
                         context.Fail("Invalid Cognito audience.");
-                        return Task.CompletedTask;
+                        return;
+                    }
+
+                    var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+                    var localUser = await userRepository.GetByCognitoSubAsync(subject, context.HttpContext.RequestAborted);
+                    if (localUser is null || !localUser.IsActive)
+                    {
+                        context.Fail("Local user is missing or inactive.");
+                        return;
                     }
 
                     if (!identity.HasClaim(claim => claim.Type == AuthClaimTypes.ActorType))
@@ -97,61 +83,30 @@ public static class JwtAuthenticationExtensions
                         identity.AddClaim(new Claim(AuthClaimTypes.ActorType, AuthActorTypes.User));
                     }
 
-                    return Task.CompletedTask;
-                }
-            };
-        })
-        .AddJwtBearer(GuestScheme, options =>
-        {
-            options.MapInboundClaims = false;
-            // Guest token la JWT noi bo ky bang symmetric key.
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidIssuer = guestIssuer,
-                ValidateAudience = true,
-                ValidAudience = guestAudience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromMinutes(1),
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(guestSigningKey)),
-                NameClaimType = AuthClaimTypes.Nickname
-            };
-            options.Events = new JwtBearerEvents
-            {
-                OnMessageReceived = context =>
-                {
-                    // Guest token di bang header rieng de khong trung voi bearer token.
-                    context.Token = context.Request.Headers[AuthHeaderNames.GuestToken].FirstOrDefault();
-                    return Task.CompletedTask;
-                },
-                OnTokenValidated = context =>
-                {
-                    // Guest principal cung duoc chuan hoa ve claim actor_type.
-                    var identity = context.Principal?.Identity as ClaimsIdentity;
-                    if (identity is null)
-                    {
-                        context.Fail("Missing identity.");
-                        return Task.CompletedTask;
-                    }
-
-                    var subject = context.Principal?.FindFirst("sub")?.Value;
-                    if (string.IsNullOrWhiteSpace(subject))
-                    {
-                        context.Fail("Invalid guest token.");
-                        return Task.CompletedTask;
-                    }
-
-                    if (!identity.HasClaim(claim => claim.Type == AuthClaimTypes.ActorType))
-                    {
-                        identity.AddClaim(new Claim(AuthClaimTypes.ActorType, AuthActorTypes.Guest));
-                    }
-
-                    return Task.CompletedTask;
+                    AddOrReplaceClaim(identity, AuthClaimTypes.LocalUserId, localUser.Id.ToString());
+                    AddOrReplaceClaim(identity, AuthClaimTypes.Role, localUser.Role.ToString().ToLowerInvariant());
+                    AddOrReplaceClaim(identity, AuthClaimTypes.IsActive, bool.TrueString);
+                    AddOrReplaceClaim(identity, AuthClaimTypes.Email, localUser.Email);
+                    AddOrReplaceClaim(identity, AuthClaimTypes.FullName, localUser.FullName);
                 }
             };
         });
 
         return services;
+    }
+
+    private static void AddOrReplaceClaim(ClaimsIdentity identity, string claimType, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        foreach (var claim in identity.FindAll(claimType).ToList())
+        {
+            identity.RemoveClaim(claim);
+        }
+
+        identity.AddClaim(new Claim(claimType, value));
     }
 }
