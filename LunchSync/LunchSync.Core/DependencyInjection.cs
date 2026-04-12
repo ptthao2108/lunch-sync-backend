@@ -16,9 +16,12 @@ namespace LunchSync.Core
             // Dang ky cac service can cho auth, collection va session.
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ISessionService, SessionService>();
-           // services.AddScoped<IResultsService, ResultsService>();
 
-            //services.AddScoped<IVotingService, VotingService>();
+            services.AddScoped<IRestaurantService, RestaurantService>();
+            services.AddScoped<IDishService, DishService>();
+
+            // services.AddScoped<IResultsService, ResultsService>();
+            // services.AddScoped<IVotingService, VotingService>();
 
             // Pure stateless — Singleton
             services.AddSingleton<ScoringEngine>();
