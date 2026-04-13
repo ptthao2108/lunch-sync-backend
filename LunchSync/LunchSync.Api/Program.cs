@@ -1,4 +1,4 @@
-using System.Threading.RateLimiting;
+﻿using System.Threading.RateLimiting;
 using LunchSync.Api.Authentication;
 using LunchSync.Api.Middleware;
 using LunchSync.Api.Swagger;
@@ -110,11 +110,39 @@ public class Program
                 Console.WriteLine($"[DEBUG] DB Connection: {context.Database.GetDbConnection().DataSource} | DB Name: {context.Database.GetDbConnection().Database}");
                 Console.WriteLine("[STARTUP] Running migrations...");
                 context.Database.Migrate();
-                Console.WriteLine("Migrations finished!");
+                var sqlFiles = new[] {
+                    "seed_dishes.sql",
+                    "seed_core_data_database_design.sql",
+                    "seed_restaurant_dishes.sql"
+                };
+                foreach (var fileName in sqlFiles)
+                {
+                    var path = Path.Combine(AppContext.BaseDirectory, "Seed", fileName);
+                    if (File.Exists(path))
+                    {
+                        Console.WriteLine($"[STARTUP] Seeding data from {fileName}...");
+                        string sql = File.ReadAllText(path);
+
+                        // Sử dụng Transaction để đảm bảo nếu 1 file lỗi thì không ảnh hưởng DB
+                        using var transaction = context.Database.BeginTransaction();
+                        try
+                        {
+                            context.Database.ExecuteSqlRaw(sql);
+                            transaction.Commit();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ERROR] Error in {fileName}: {ex.Message}");
+                            transaction.Rollback();
+                            throw; // Dừng startup nếu dữ liệu core bị lỗi
+                        }
+                    }
+                }
+                Console.WriteLine("[STARTUP] All migrations and seeding finished!");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Migration failed: " + ex.Message);
+                Console.WriteLine("Critical Startup Failure: " + ex.Message);
                 throw;
             }
         }
