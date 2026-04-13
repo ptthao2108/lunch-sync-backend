@@ -252,23 +252,23 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
             "NotAuthorizedException" => new InvalidCredentialsException(),
             "UserNotFoundException" => new InvalidCredentialsException(),
             "CodeMismatchException" => new ValidationException(
-                "Mã OTP không đúng.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Mã OTP không chính xác." }),
+                "Ma OTP khong dung.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Ma OTP khong chinh xac." }),
             "ExpiredCodeException" => new ValidationException(
-                "Mã OTP đã hết hạn.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Mã OTP đã hết hạn, vui lòng yêu cầu mã mới." }),
+                "Ma OTP da het han.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Ma OTP da het han, vui long yeu cau ma moi." }),
             "LimitExceededException" => new ValidationException(
-                "Bạn đã yêu cầu quá nhiều lần.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Vui lòng đợi ít phút rồi thử lại." }),
+                "Ban da yeu cau qua nhieu lan.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Vui long doi it phut roi thu lai." }),
             "UserNotConfirmedException" => new ValidationException(
-                "Tài khoản chưa được xác nhận.",
-                new Dictionary<string, string> { ["email"] = "Vui lòng xác nhận email trước khi đăng nhập." }),
+                "Tai khoan chua duoc xac nhan.",
+                new Dictionary<string, string> { ["email"] = "Vui long xac nhan email truoc khi dang nhap." }),
             "InvalidPasswordException" => new ValidationException(
-                "Mật khẩu không hợp lệ.",
-                new Dictionary<string, string> { ["password"] = message ?? "Mật khẩu không đáp ứng policy của Cognito." }),
+                "Mat khau khong hop le.",
+                new Dictionary<string, string> { ["password"] = message ?? "Mat khau khong dap ung policy cua Cognito." }),
             "InvalidParameterException" => new ValidationException(
-                "Dữ liệu gửi lên không hợp lệ.",
-                new Dictionary<string, string> { ["auth"] = message ?? "Yêu cầu không hợp lệ." }),
+                "Du lieu gui len khong hop le.",
+                new Dictionary<string, string> { ["auth"] = message ?? "Yeu cau khong hop le." }),
             _ => new InvalidOperationException(message ?? "Cognito request failed.")
         };
     }
