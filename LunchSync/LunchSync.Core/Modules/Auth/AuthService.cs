@@ -75,16 +75,16 @@ public sealed class AuthService : IAuthService
         var normalizedEmail = NormalizeAndValidateVerifyOtpRequest(request);
         var pendingRegistration = await _pendingRegistrationStore.GetAsync(normalizedEmail, cancellationToken);
 
-        await _cognitoAuthProvider.ConfirmSignUpAsync(
-            request with { Email = normalizedEmail, Otp = request.Otp.Trim() },
-            cancellationToken);
-
         if (pendingRegistration is null)
         {
             throw new ValidationException(
                 "Khong tim thay dang ky cho email nay.",
                 new Dictionary<string, string> { ["email"] = "Thong tin dang ky da het han. Vui long dang ky lai." });
         }
+
+        await _cognitoAuthProvider.ConfirmSignUpAsync(
+            request with { Email = normalizedEmail, Otp = request.Otp.Trim() },
+            cancellationToken);
 
         await SyncLocalUserForConfirmedRegistrationAsync(pendingRegistration, cancellationToken);
         await _pendingRegistrationStore.RemoveAsync(normalizedEmail, cancellationToken);
@@ -259,12 +259,9 @@ public sealed class AuthService : IAuthService
             return await SyncUserProfileAsync(existingByEmail, cognitoResult, cancellationToken);
         }
 
-        return await _userRepository.AddAsync(new User
-        {
-            CognitoSub = cognitoResult.CognitoSub,
-            Email = cognitoResult.Email,
-            FullName = cognitoResult.FullName?.Trim()
-        }, cancellationToken);
+        throw new ValidationException(
+            "Tai khoan chua duoc dong bo vao he thong.",
+            new Dictionary<string, string> { ["email"] = "Vui long xac thuc OTP truoc khi dang nhap." });
     }
 
     private async Task<User> SyncRegisteredUserProfileAsync(
