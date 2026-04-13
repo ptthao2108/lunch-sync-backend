@@ -56,6 +56,21 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [EnableRateLimiting("auth-public")]
+    [HttpPost("verify-otp")]
+    [ProducesResponseType(typeof(VerifyOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> VerifyOtp(
+        [FromBody] VerifyOtpRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _authService.VerifyOtpAsync(
+            request ?? new VerifyOtpRequest(string.Empty, string.Empty),
+            cancellationToken);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("auth-public")]
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

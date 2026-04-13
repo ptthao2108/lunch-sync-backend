@@ -19,6 +19,16 @@ public sealed record RegisterResponse(
     [property: JsonPropertyName("message")] string Message
 );
 
+public sealed record VerifyOtpRequest(
+    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
+    [property: Required, MinLength(6), JsonPropertyName("otp")] string Otp
+);
+
+public sealed record VerifyOtpResponse(
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("message")] string Message
+);
+
 public sealed record LoginRequest(
     [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
 

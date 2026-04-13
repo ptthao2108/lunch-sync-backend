@@ -54,6 +54,21 @@ public sealed class AuthService : IAuthService
         return createdUser.ToRegisterResponse("Đăng ký thành công. Vui lòng xác nhận email nếu cần.");
     }
 
+    public async Task<VerifyOtpResponse> VerifyOtpAsync(
+        VerifyOtpRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeAndValidateVerifyOtpRequest(request);
+
+        await _cognitoAuthProvider.ConfirmSignUpAsync(
+            request with { Email = normalizedEmail, Otp = request.Otp.Trim() },
+            cancellationToken);
+
+        return new VerifyOtpResponse(
+            normalizedEmail,
+            "Xac thuc OTP thanh cong. Ban co the dang nhap.");
+    }
+
     public async Task<LoginResponse> LoginAsync(
         LoginRequest request,
         CancellationToken cancellationToken = default)
@@ -127,6 +142,38 @@ public sealed class AuthService : IAuthService
         if (details.Count > 0)
         {
             throw new ValidationException("Dữ liệu đăng nhập không hợp lệ.", details);
+        }
+
+        return normalizedEmail!;
+    }
+
+    private static string NormalizeAndValidateVerifyOtpRequest(VerifyOtpRequest request)
+    {
+        var normalizedEmail = request.Email?.Trim().ToLowerInvariant();
+        var otp = request.Otp?.Trim();
+        var details = new Dictionary<string, string>();
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            details["email"] = "Email la bat buoc.";
+        }
+        else if (!EmailValidator.IsValid(normalizedEmail))
+        {
+            details["email"] = "Email khong dung dinh dang.";
+        }
+
+        if (string.IsNullOrWhiteSpace(otp))
+        {
+            details["otp"] = "Ma OTP la bat buoc.";
+        }
+        else if (otp.Length < 6)
+        {
+            details["otp"] = "Ma OTP phai co it nhat 6 ky tu.";
+        }
+
+        if (details.Count > 0)
+        {
+            throw new ValidationException("Du lieu xac thuc OTP khong hop le.", details);
         }
 
         return normalizedEmail!;

@@ -131,6 +131,29 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
             fullName?.Trim());
     }
 
+    public async Task ConfirmSignUpAsync(
+        VerifyOtpRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        LogCognitoConfigSnapshot("confirm-sign-up");
+
+        var payload = new
+        {
+            ClientId = GetRequiredConfig("Cognito:ClientId"),
+            SecretHash = BuildSecretHash(request.Email),
+            Username = request.Email.Trim().ToLowerInvariant(),
+            ConfirmationCode = request.Otp.Trim()
+        };
+
+        using var response = await SendCognitoRequestAsync(
+            "AWSCognitoIdentityProviderService.ConfirmSignUp",
+            payload,
+            cancellationToken);
+
+        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
+        EnsureSuccess(response, document, request.Email);
+    }
+
     private async Task<HttpResponseMessage> SendCognitoRequestAsync(
         string target,
         object payload,
@@ -206,6 +229,12 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
             "UsernameExistsException" => new DuplicateEntityException("User", "email", email ?? "unknown"),
             "NotAuthorizedException" => new InvalidCredentialsException(),
             "UserNotFoundException" => new InvalidCredentialsException(),
+            "CodeMismatchException" => new ValidationException(
+                "Mã OTP không đúng.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Mã OTP không chính xác." }),
+            "ExpiredCodeException" => new ValidationException(
+                "Mã OTP đã hết hạn.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Mã OTP đã hết hạn, vui lòng yêu cầu mã mới." }),
             "UserNotConfirmedException" => new ValidationException(
                 "Tài khoản chưa được xác nhận.",
                 new Dictionary<string, string> { ["email"] = "Vui lòng xác nhận email trước khi đăng nhập." }),
