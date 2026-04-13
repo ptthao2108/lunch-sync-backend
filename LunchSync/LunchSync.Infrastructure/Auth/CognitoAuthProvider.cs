@@ -154,6 +154,28 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
         EnsureSuccess(response, document, request.Email);
     }
 
+    public async Task ResendConfirmationCodeAsync(
+        ResendOtpRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        LogCognitoConfigSnapshot("resend-confirmation-code");
+
+        var payload = new
+        {
+            ClientId = GetRequiredConfig("Cognito:ClientId"),
+            SecretHash = BuildSecretHash(request.Email),
+            Username = request.Email.Trim().ToLowerInvariant()
+        };
+
+        using var response = await SendCognitoRequestAsync(
+            "AWSCognitoIdentityProviderService.ResendConfirmationCode",
+            payload,
+            cancellationToken);
+
+        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
+        EnsureSuccess(response, document, request.Email);
+    }
+
     private async Task<HttpResponseMessage> SendCognitoRequestAsync(
         string target,
         object payload,
@@ -235,6 +257,9 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
             "ExpiredCodeException" => new ValidationException(
                 "Mã OTP đã hết hạn.",
                 new Dictionary<string, string> { ["otp"] = message ?? "Mã OTP đã hết hạn, vui lòng yêu cầu mã mới." }),
+            "LimitExceededException" => new ValidationException(
+                "Bạn đã yêu cầu quá nhiều lần.",
+                new Dictionary<string, string> { ["otp"] = message ?? "Vui lòng đợi ít phút rồi thử lại." }),
             "UserNotConfirmedException" => new ValidationException(
                 "Tài khoản chưa được xác nhận.",
                 new Dictionary<string, string> { ["email"] = "Vui lòng xác nhận email trước khi đăng nhập." }),

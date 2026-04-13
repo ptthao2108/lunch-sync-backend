@@ -27,6 +27,15 @@ public sealed record VerifyOtpResponse(
     [property: JsonPropertyName("message")] string Message
 );
 
+public sealed record ResendOtpRequest(
+    [property: Required, EmailAddress, JsonPropertyName("email")] string Email
+);
+
+public sealed record ResendOtpResponse(
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("message")] string Message
+);
+
 public sealed record LoginRequest(
     [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
 

@@ -94,6 +94,31 @@ public sealed class AuthService : IAuthService
             "Xac thuc OTP thanh cong. Ban co the dang nhap.");
     }
 
+    public async Task<ResendOtpResponse> ResendOtpAsync(
+        ResendOtpRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeAndValidateResendOtpRequest(request);
+        var pendingRegistration = await _pendingRegistrationStore.GetAsync(normalizedEmail, cancellationToken);
+
+        if (pendingRegistration is null)
+        {
+            throw new ValidationException(
+                "Khong tim thay dang ky cho email nay.",
+                new Dictionary<string, string> { ["email"] = "Thong tin dang ky da het han. Vui long dang ky lai." });
+        }
+
+        await _cognitoAuthProvider.ResendConfirmationCodeAsync(
+            request with { Email = normalizedEmail },
+            cancellationToken);
+
+        await _pendingRegistrationStore.SaveAsync(pendingRegistration, cancellationToken);
+
+        return new ResendOtpResponse(
+            normalizedEmail,
+            "Da gui lai ma OTP. Vui long kiem tra email.");
+    }
+
     public async Task<LoginResponse> LoginAsync(
         LoginRequest request,
         CancellationToken cancellationToken = default)
@@ -172,6 +197,28 @@ public sealed class AuthService : IAuthService
         if (details.Count > 0)
         {
             throw new ValidationException("Du lieu xac thuc OTP khong hop le.", details);
+        }
+
+        return normalizedEmail!;
+    }
+
+    private static string NormalizeAndValidateResendOtpRequest(ResendOtpRequest request)
+    {
+        var normalizedEmail = request.Email?.Trim().ToLowerInvariant();
+        var details = new Dictionary<string, string>();
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            details["email"] = "Email la bat buoc.";
+        }
+        else if (!EmailValidator.IsValid(normalizedEmail))
+        {
+            details["email"] = "Email khong dung dinh dang.";
+        }
+
+        if (details.Count > 0)
+        {
+            throw new ValidationException("Du lieu gui lai OTP khong hop le.", details);
         }
 
         return normalizedEmail!;

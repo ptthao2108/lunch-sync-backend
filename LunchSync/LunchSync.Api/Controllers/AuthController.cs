@@ -71,6 +71,21 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [EnableRateLimiting("auth-public")]
+    [HttpPost("resend-otp")]
+    [ProducesResponseType(typeof(ResendOtpResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResendOtp(
+        [FromBody] ResendOtpRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _authService.ResendOtpAsync(
+            request ?? new ResendOtpRequest(string.Empty),
+            cancellationToken);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("auth-public")]
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
