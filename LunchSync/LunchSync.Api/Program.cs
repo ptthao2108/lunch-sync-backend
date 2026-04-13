@@ -109,6 +109,25 @@ public class Program
                 var context = services.GetRequiredService<AppDbContext>();
                 Console.WriteLine($"[DEBUG] DB Connection: {context.Database.GetDbConnection().DataSource} | DB Name: {context.Database.GetDbConnection().Database}");
                 Console.WriteLine("[STARTUP] Running migrations...");
+                var pendingMigrations = context.Database.GetPendingMigrations().ToList();
+
+                if (pendingMigrations.Contains("20260413073347_InitialCreate"))
+                {
+                    // Check đại diện 1 bảng để biết schema đã tồn tại chưa
+                    var schemaExists = context.Database
+                        .SqlQueryRaw<int>(
+                            "SELECT COUNT(1)::int FROM information_schema.tables WHERE table_name = 'collections' AND table_schema = 'public'")
+                        .FirstOrDefault() > 0;
+
+                    if (schemaExists)
+                    {
+                        Console.WriteLine("[STARTUP] Schema already exists, stamping InitialCreate...");
+                        context.Database.ExecuteSqlRaw(
+                            "INSERT INTO \"__EFMigrationsHistory\" (migration_id, product_version) " +
+                            "VALUES ('20260413073347_InitialCreate', '9.0.14') " +
+                            "ON CONFLICT DO NOTHING");
+                    }
+                }
                 context.Database.Migrate();
                 var sqlFiles = new[] {
                     "seed_dishes.sql",
