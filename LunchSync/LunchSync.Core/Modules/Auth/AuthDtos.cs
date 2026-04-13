@@ -1,58 +1,68 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 
 namespace LunchSync.Core.Modules.Auth;
 
-public sealed record RegisterRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
+public class RegisterRequest
+{
+    [Required, EmailAddress]
+    public string Email { get; set; } = string.Empty;
 
-    [property: Required, MinLength(6), JsonPropertyName("password")] string Password,
+    [Required, MinLength(6)]
+    public string Password { get; set; } = string.Empty;
 
-    [property: JsonPropertyName("full_name")] string? FullName
-);
+    public string? FullName { get; set; }
+}
 
-public sealed record RegisterResponse(
-    [property: JsonPropertyName("user_id")] Guid UserId,
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string Role,
-    [property: JsonPropertyName("message")] string Message
-);
+public class RegisterResponse
+{
+    public Guid UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
 
-public sealed record LoginRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
+public class LoginRequest
+{
+    [Required, EmailAddress]
+    public string Email { get; set; } = string.Empty;
 
-    [property: Required, MinLength(6), JsonPropertyName("password")] string Password
-);
+    [Required, MinLength(6)]
+    public string Password { get; set; } = string.Empty;
+}
 
-public sealed record LoginResponse(
-    [property: JsonPropertyName("access_token")] string AccessToken,
-    [property: JsonPropertyName("expires_in")] int ExpiresIn,
-    [property: JsonPropertyName("user_id")] Guid UserId,
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string Role
-);
+public class LoginResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
+    public Guid UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string Role { get; set; } = string.Empty;
+}
 
-public sealed record CurrentUserResponse(
-    Guid? UserId,
-    string? CognitoSub,
-    string? Email,
-    string? FullName,
-    string? Role,
-    bool IsActive
-);
+public class CurrentUserResponse
+{
+    public Guid? UserId { get; set; }
+    public string? CognitoSub { get; set; }
+    public string? Email { get; set; }
+    public string? FullName { get; set; }
+    public string? Role { get; set; }
+    public bool IsActive { get; set; }
+}
 
-public sealed record CognitoRegisterResult(
-    [property: JsonPropertyName("cognito_sub")] string CognitoSub,
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName
-);
+public class CognitoRegisterResult
+{
+    public string CognitoSub { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+}
 
-public sealed record CognitoLoginResult(
-    string AccessToken,
-    int ExpiresIn,
-    string CognitoSub,
-    string Email,
-    string? FullName
-);
+public class CognitoLoginResult
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
+    public string CognitoSub { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+}
