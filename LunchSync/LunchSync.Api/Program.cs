@@ -131,11 +131,13 @@ public class Program
                 }
 
                 context.Database.Migrate();
+
                 var sqlFiles = new[] {
-                    "seed_dishes.sql",
-                    "seed_core_data_database_design.sql",
-                    "seed_restaurant_dishes.sql"
-                };
+            "seed_dishes.sql",
+            "seed_core_data_database_design.sql",
+            "seed_restaurant_dishes.sql"
+        };
+
                 foreach (var fileName in sqlFiles)
                 {
                     var path = Path.Combine(AppContext.BaseDirectory, "Seed", fileName);
@@ -144,7 +146,6 @@ public class Program
                         Console.WriteLine($"[STARTUP] Seeding data from {fileName}...");
                         string sql = File.ReadAllText(path);
 
-                        // Dùng ADO.NET trực tiếp, tránh EF Core parse {} trong JSON
                         var conn = context.Database.GetDbConnection();
                         if (conn.State != System.Data.ConnectionState.Open)
                             conn.Open();
@@ -157,15 +158,23 @@ public class Program
                             cmd.CommandText = sql;
                             cmd.ExecuteNonQuery();
                             transaction.Commit();
+                            Console.WriteLine($"[STARTUP] Seeded {fileName} successfully.");
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"[ERROR] Error in {fileName}: {ex.Message}");
-                            transaction.Rollback();
+                            // Npgsql tự rollback, chỉ gọi thủ công nếu còn active
+                            if (transaction.Connection != null)
+                                transaction.Rollback();
                             throw;
                         }
                     }
+                    else
+                    {
+                        Console.WriteLine($"[STARTUP] File not found, skipping: {fileName}");
+                    }
                 }
+
                 Console.WriteLine("[STARTUP] All migrations and seeding finished!");
             }
             catch (Exception ex)
