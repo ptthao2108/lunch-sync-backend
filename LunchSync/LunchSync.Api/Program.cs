@@ -113,13 +113,14 @@ public class Program
 
                 if (pendingMigrations.Contains("20260413073347_InitialCreate"))
                 {
-                    // Check đại diện 1 bảng để biết schema đã tồn tại chưa
-                    var schemaExists = context.Database
-                        .SqlQueryRaw<int>(
-                            "SELECT COUNT(1)::int FROM information_schema.tables WHERE table_name = 'collections' AND table_schema = 'public'")
-                        .FirstOrDefault() > 0;
+                    var conn = context.Database.GetDbConnection();
+                    conn.Open();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT COUNT(1) FROM information_schema.tables WHERE table_name = 'collections' AND table_schema = 'public'";
+                    var result = (long)cmd.ExecuteScalar()!;
+                    conn.Close();
 
-                    if (schemaExists)
+                    if (result > 0)
                     {
                         Console.WriteLine("[STARTUP] Schema already exists, stamping InitialCreate...");
                         context.Database.ExecuteSqlRaw(
@@ -128,6 +129,7 @@ public class Program
                             "ON CONFLICT DO NOTHING");
                     }
                 }
+
                 context.Database.Migrate();
                 var sqlFiles = new[] {
                     "seed_dishes.sql",
