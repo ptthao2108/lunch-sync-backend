@@ -133,10 +133,10 @@ public class Program
                 context.Database.Migrate();
 
                 var sqlFiles = new[] {
-            "seed_dishes.sql",
-            "seed_core_data_database_design.sql",
-            "seed_restaurant_dishes.sql"
-        };
+                    "seed_dishes.sql",
+                    "seed_core_data_database_design.sql",
+                    "seed_restaurant_dishes.sql"
+                };
 
                 foreach (var fileName in sqlFiles)
                 {
@@ -146,9 +146,10 @@ public class Program
                         Console.WriteLine($"[STARTUP] Seeding data from {fileName}...");
                         string sql = File.ReadAllText(path);
 
-                        var conn = context.Database.GetDbConnection();
-                        if (conn.State != System.Data.ConnectionState.Open)
-                            conn.Open();
+                        // Mở connection mới độc lập, không dùng chung với EF Core
+                        var connectionString = context.Database.GetConnectionString();
+                        using var conn = new Npgsql.NpgsqlConnection(connectionString);
+                        conn.Open();
 
                         using var transaction = conn.BeginTransaction();
                         try
@@ -163,7 +164,6 @@ public class Program
                         catch (Exception ex)
                         {
                             Console.WriteLine($"[ERROR] Error in {fileName}: {ex.Message}");
-                            // Npgsql tự rollback, chỉ gọi thủ công nếu còn active
                             if (transaction.Connection != null)
                                 transaction.Rollback();
                             throw;
