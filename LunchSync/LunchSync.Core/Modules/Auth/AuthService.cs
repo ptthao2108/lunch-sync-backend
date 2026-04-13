@@ -10,11 +10,16 @@ public sealed class AuthService : IAuthService
     private static readonly EmailAddressAttribute EmailValidator = new();
     private readonly IUserRepository _userRepository;
     private readonly ICognitoAuthProvider _cognitoAuthProvider;
+    private readonly IPendingRegistrationStore _pendingRegistrationStore;
 
-    public AuthService(IUserRepository userRepository, ICognitoAuthProvider cognitoAuthProvider)
+    public AuthService(
+        IUserRepository userRepository,
+        ICognitoAuthProvider cognitoAuthProvider,
+        IPendingRegistrationStore pendingRegistrationStore)
     {
         _userRepository = userRepository;
         _cognitoAuthProvider = cognitoAuthProvider;
+        _pendingRegistrationStore = pendingRegistrationStore;
     }
 
     public async Task<RegisterResponse> RegisterAsync(
@@ -35,23 +40,32 @@ public sealed class AuthService : IAuthService
                 throw new AuthIdentityConflictException(cognitoResult.Email);
             }
 
-            return existingBySub.ToRegisterResponse("Đăng ký thành công. Vui lòng xác nhận email nếu cần.");
+            return new RegisterResponse(
+                existingBySub.Email,
+                existingBySub.FullName,
+                "Tai khoan da ton tai. Ban co the dang nhap.");
         }
 
         var existingByEmail = await _userRepository.GetByEmailAsync(cognitoResult.Email, cancellationToken);
         if (existingByEmail is not null)
         {
-            throw new AuthIdentityConflictException(cognitoResult.Email);
+            if (!string.Equals(existingByEmail.CognitoSub, cognitoResult.CognitoSub, StringComparison.Ordinal))
+            {
+                throw new AuthIdentityConflictException(cognitoResult.Email);
+            }
+
+            return new RegisterResponse(
+                existingByEmail.Email,
+                existingByEmail.FullName,
+                "Tai khoan da ton tai. Ban co the dang nhap.");
         }
 
-        var createdUser = await _userRepository.AddAsync(new User
-        {
-            CognitoSub = cognitoResult.CognitoSub,
-            Email = cognitoResult.Email,
-            FullName = cognitoResult.FullName?.Trim()
-        }, cancellationToken);
+        await _pendingRegistrationStore.SaveAsync(cognitoResult, cancellationToken);
 
-        return createdUser.ToRegisterResponse("Đăng ký thành công. Vui lòng xác nhận email nếu cần.");
+        return new RegisterResponse(
+            cognitoResult.Email,
+            cognitoResult.FullName?.Trim(),
+            "Dang ky thanh cong. Vui long xac thuc OTP de hoan tat.");
     }
 
     public async Task<VerifyOtpResponse> VerifyOtpAsync(
@@ -59,10 +73,21 @@ public sealed class AuthService : IAuthService
         CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeAndValidateVerifyOtpRequest(request);
+        var pendingRegistration = await _pendingRegistrationStore.GetAsync(normalizedEmail, cancellationToken);
 
         await _cognitoAuthProvider.ConfirmSignUpAsync(
             request with { Email = normalizedEmail, Otp = request.Otp.Trim() },
             cancellationToken);
+
+        if (pendingRegistration is null)
+        {
+            throw new ValidationException(
+                "Khong tim thay dang ky cho email nay.",
+                new Dictionary<string, string> { ["email"] = "Thong tin dang ky da het han. Vui long dang ky lai." });
+        }
+
+        await SyncLocalUserForConfirmedRegistrationAsync(pendingRegistration, cancellationToken);
+        await _pendingRegistrationStore.RemoveAsync(normalizedEmail, cancellationToken);
 
         return new VerifyOtpResponse(
             normalizedEmail,
@@ -96,52 +121,25 @@ public sealed class AuthService : IAuthService
 
         if (string.IsNullOrWhiteSpace(normalizedEmail))
         {
-            details["email"] = "Email là bắt buộc.";
+            details["email"] = "Email la bat buoc.";
         }
         else if (!EmailValidator.IsValid(normalizedEmail))
         {
-            details["email"] = "Email không đúng định dạng.";
+            details["email"] = "Email khong dung dinh dang.";
         }
 
         if (string.IsNullOrWhiteSpace(request.Password))
         {
-            details["password"] = "Mật khẩu là bắt buộc.";
+            details["password"] = "Mat khau la bat buoc.";
         }
         else if (!IsValidPassword(request.Password))
         {
-            details["password"] = "Mật khẩu phải có ít nhất 8 ký tự, gồm 1 chữ hoa, 1 số và 1 ký tự đặc biệt.";
+            details["password"] = "Mat khau phai co it nhat 8 ky tu, gom 1 chu hoa, 1 so va 1 ky tu dac biet.";
         }
 
         if (details.Count > 0)
         {
-            throw new ValidationException("Dữ liệu đăng ký không hợp lệ.", details);
-        }
-
-        return normalizedEmail!;
-    }
-
-    private static string NormalizeAndValidateLoginRequest(LoginRequest request)
-    {
-        var normalizedEmail = request.Email?.Trim().ToLowerInvariant();
-        var details = new Dictionary<string, string>();
-
-        if (string.IsNullOrWhiteSpace(normalizedEmail))
-        {
-            details["email"] = "Email là bắt buộc.";
-        }
-        else if (!EmailValidator.IsValid(normalizedEmail))
-        {
-            details["email"] = "Email không đúng định dạng.";
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Password))
-        {
-            details["password"] = "Mật khẩu là bắt buộc.";
-        }
-
-        if (details.Count > 0)
-        {
-            throw new ValidationException("Dữ liệu đăng nhập không hợp lệ.", details);
+            throw new ValidationException("Du lieu dang ky khong hop le.", details);
         }
 
         return normalizedEmail!;
@@ -179,6 +177,67 @@ public sealed class AuthService : IAuthService
         return normalizedEmail!;
     }
 
+    private static string NormalizeAndValidateLoginRequest(LoginRequest request)
+    {
+        var normalizedEmail = request.Email?.Trim().ToLowerInvariant();
+        var details = new Dictionary<string, string>();
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            details["email"] = "Email la bat buoc.";
+        }
+        else if (!EmailValidator.IsValid(normalizedEmail))
+        {
+            details["email"] = "Email khong dung dinh dang.";
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            details["password"] = "Mat khau la bat buoc.";
+        }
+
+        if (details.Count > 0)
+        {
+            throw new ValidationException("Du lieu dang nhap khong hop le.", details);
+        }
+
+        return normalizedEmail!;
+    }
+
+    private async Task<User> SyncLocalUserForConfirmedRegistrationAsync(
+        CognitoRegisterResult registration,
+        CancellationToken cancellationToken)
+    {
+        var existingBySub = await _userRepository.GetByCognitoSubAsync(registration.CognitoSub, cancellationToken);
+        if (existingBySub is not null)
+        {
+            if (!string.Equals(existingBySub.Email, registration.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AuthIdentityConflictException(registration.Email);
+            }
+
+            return await SyncRegisteredUserProfileAsync(existingBySub, registration, cancellationToken);
+        }
+
+        var existingByEmail = await _userRepository.GetByEmailAsync(registration.Email, cancellationToken);
+        if (existingByEmail is not null)
+        {
+            if (!string.Equals(existingByEmail.CognitoSub, registration.CognitoSub, StringComparison.Ordinal))
+            {
+                throw new AuthIdentityConflictException(registration.Email);
+            }
+
+            return await SyncRegisteredUserProfileAsync(existingByEmail, registration, cancellationToken);
+        }
+
+        return await _userRepository.AddAsync(new User
+        {
+            CognitoSub = registration.CognitoSub,
+            Email = registration.Email,
+            FullName = registration.FullName?.Trim()
+        }, cancellationToken);
+    }
+
     private async Task<User> ResolveLocalUserForLoginAsync(
         CognitoLoginResult cognitoResult,
         CancellationToken cancellationToken)
@@ -206,6 +265,26 @@ public sealed class AuthService : IAuthService
             Email = cognitoResult.Email,
             FullName = cognitoResult.FullName?.Trim()
         }, cancellationToken);
+    }
+
+    private async Task<User> SyncRegisteredUserProfileAsync(
+        User user,
+        CognitoRegisterResult registration,
+        CancellationToken cancellationToken)
+    {
+        var normalizedFullName = registration.FullName?.Trim();
+        var hasChanges =
+            !string.Equals(user.Email, registration.Email, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(user.FullName, normalizedFullName, StringComparison.Ordinal);
+
+        if (!hasChanges)
+        {
+            return user;
+        }
+
+        user.Email = registration.Email;
+        user.FullName = normalizedFullName;
+        return await _userRepository.UpdateAsync(user, cancellationToken);
     }
 
     private async Task<User> SyncUserProfileAsync(

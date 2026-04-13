@@ -12,10 +12,8 @@ public sealed record RegisterRequest(
 );
 
 public sealed record RegisterResponse(
-    [property: JsonPropertyName("user_id")] Guid UserId,
     [property: JsonPropertyName("email")] string Email,
     [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string Role,
     [property: JsonPropertyName("message")] string Message
 );
 
