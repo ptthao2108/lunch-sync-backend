@@ -146,26 +146,20 @@ public class Program
                         Console.WriteLine($"[STARTUP] Seeding data from {fileName}...");
                         string sql = File.ReadAllText(path);
 
-                        // Mở connection mới độc lập, không dùng chung với EF Core
                         var connectionString = context.Database.GetConnectionString();
                         using var conn = new Npgsql.NpgsqlConnection(connectionString);
                         conn.Open();
 
-                        using var transaction = conn.BeginTransaction();
                         try
                         {
                             using var cmd = conn.CreateCommand();
-                            cmd.Transaction = transaction;
                             cmd.CommandText = sql;
                             cmd.ExecuteNonQuery();
-                            transaction.Commit();
                             Console.WriteLine($"[STARTUP] Seeded {fileName} successfully.");
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"[ERROR] Error in {fileName}: {ex.Message}");
-                            if (transaction.Connection != null)
-                                transaction.Rollback();
                             throw;
                         }
                     }
