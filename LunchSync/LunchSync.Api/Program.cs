@@ -144,18 +144,25 @@ public class Program
                         Console.WriteLine($"[STARTUP] Seeding data from {fileName}...");
                         string sql = File.ReadAllText(path);
 
-                        // Sử dụng Transaction để đảm bảo nếu 1 file lỗi thì không ảnh hưởng DB
-                        using var transaction = context.Database.BeginTransaction();
+                        // Dùng ADO.NET trực tiếp, tránh EF Core parse {} trong JSON
+                        var conn = context.Database.GetDbConnection();
+                        if (conn.State != System.Data.ConnectionState.Open)
+                            conn.Open();
+
+                        using var transaction = conn.BeginTransaction();
                         try
                         {
-                            context.Database.ExecuteSqlRaw(sql);
+                            using var cmd = conn.CreateCommand();
+                            cmd.Transaction = transaction;
+                            cmd.CommandText = sql;
+                            cmd.ExecuteNonQuery();
                             transaction.Commit();
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"[ERROR] Error in {fileName}: {ex.Message}");
                             transaction.Rollback();
-                            throw; // Dừng startup nếu dữ liệu core bị lỗi
+                            throw;
                         }
                     }
                 }
