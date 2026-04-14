@@ -12,10 +12,27 @@ public sealed record RegisterRequest(
 );
 
 public sealed record RegisterResponse(
-    [property: JsonPropertyName("user_id")] Guid UserId,
     [property: JsonPropertyName("email")] string Email,
     [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string Role,
+    [property: JsonPropertyName("message")] string Message
+);
+
+public sealed record VerifyOtpRequest(
+    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
+    [property: Required, MinLength(6), JsonPropertyName("otp")] string Otp
+);
+
+public sealed record VerifyOtpResponse(
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("message")] string Message
+);
+
+public sealed record ResendOtpRequest(
+    [property: Required, EmailAddress, JsonPropertyName("email")] string Email
+);
+
+public sealed record ResendOtpResponse(
+    [property: JsonPropertyName("email")] string Email,
     [property: JsonPropertyName("message")] string Message
 );
 
@@ -35,12 +52,12 @@ public sealed record LoginResponse(
 );
 
 public sealed record CurrentUserResponse(
-    Guid? UserId,
-    string? CognitoSub,
-    string? Email,
-    string? FullName,
-    string? Role,
-    bool IsActive
+    [property: JsonPropertyName("user_id")] Guid? UserId,
+    [property: JsonPropertyName("cognito_sub")] string? CognitoSub,
+    [property: JsonPropertyName("email")] string? Email,
+    [property: JsonPropertyName("full_name")] string? FullName,
+    [property: JsonPropertyName("role")] string? Role,
+    [property: JsonPropertyName("is_active")] bool IsActive
 );
 
 public sealed record CognitoRegisterResult(
