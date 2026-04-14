@@ -4,66 +4,61 @@ using System.Text.Json.Serialization;
 namespace LunchSync.Core.Modules.Auth;
 
 public sealed record RegisterRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
-
-    [property: Required, MinLength(6), JsonPropertyName("password")] string Password,
-
-    [property: JsonPropertyName("full_name")] string? FullName
+    string Email,
+    string Password,
+    string? FullName
 );
 
 public sealed record RegisterResponse(
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("message")] string Message
+    string Email,
+    string? FullName,
+    string Message
 );
 
 public sealed record VerifyOtpRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
-    [property: Required, MinLength(6), JsonPropertyName("otp")] string Otp
+    string Email,
+    string Otp
 );
 
 public sealed record VerifyOtpResponse(
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("message")] string Message
+    string Email,
+    string Message
 );
 
 public sealed record ResendOtpRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email
+    string Email
 );
 
 public sealed record ResendOtpResponse(
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("message")] string Message
+    string Email,
+    string Message
 );
 
 public sealed record LoginRequest(
-    [property: Required, EmailAddress, JsonPropertyName("email")] string Email,
-
-    [property: Required, MinLength(6), JsonPropertyName("password")] string Password
+    string Email,
+    string Password
 );
 
 public sealed record LoginResponse(
-    [property: JsonPropertyName("access_token")] string AccessToken,
-    [property: JsonPropertyName("expires_in")] int ExpiresIn,
-    [property: JsonPropertyName("user_id")] Guid UserId,
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string Role
+    string AccessToken,
+    int ExpiresIn,
+    Guid UserId,
+    string Email,
+    string? FullName,
+    string Role
 );
 
 public sealed record CurrentUserResponse(
-    [property: JsonPropertyName("user_id")] Guid? UserId,
-    [property: JsonPropertyName("cognito_sub")] string? CognitoSub,
-    [property: JsonPropertyName("email")] string? Email,
-    [property: JsonPropertyName("full_name")] string? FullName,
-    [property: JsonPropertyName("role")] string? Role,
-    [property: JsonPropertyName("is_active")] bool IsActive
+    Guid? UserId,
+    string? CognitoSub,
+    string? Email,
+    string? FullName,
+    string? Role,
+    bool IsActive
 );
 
 public sealed record CognitoRegisterResult(
-    [property: JsonPropertyName("cognito_sub")] string CognitoSub,
-    [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("full_name")] string? FullName
+    string CognitoSub,string Email,string? FullName
 );
 
 public sealed record CognitoLoginResult(
