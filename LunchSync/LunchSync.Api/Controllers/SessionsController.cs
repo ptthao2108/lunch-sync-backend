@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LunchSync.Api.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/sessions")]
 public class SessionsController : ControllerBase
@@ -53,10 +52,11 @@ public class SessionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> JoinAsync([FromRoute] string pin, [FromBody] JoinReq request, CancellationToken ct)
     {
-        // Guest join bang PIN va nickname, chua can host JWT.
         var validPin = Pin.Create(pin);
-        Guid? UserId = await GetCurrentHostIdAsync(ct) ?? null; // Giả sử UserId được lấy từ Token/Identity. Ở đây tạm lấy Guid mẫu.
-        var result = await _sessionService.JoinSessionAsync(UserId, validPin.Value, request, ct);
+        Guid? userId = _currentUser.IsAuthenticated
+            ? await GetCurrentHostIdAsync(ct)
+            : null;
+        var result = await _sessionService.JoinSessionAsync(userId, validPin.Value, request, ct);
         return Ok(result);
     }
 
@@ -83,9 +83,7 @@ public class SessionsController : ControllerBase
     [HttpPost("{pin}/cancel")]
     [ProducesResponseType(typeof(SessionCancelRes), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CancelAsync(
-        [FromRoute] string pin,
-        CancellationToken ct)
+    public async Task<IActionResult> CancelAsync([FromRoute] string pin, CancellationToken ct)
     {
         var hostId = await GetCurrentHostIdAsync(ct);
         if (hostId is null)
