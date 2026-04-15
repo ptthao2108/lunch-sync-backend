@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace LunchSync.Api.Controllers;
 
 [ApiController]
-[Route("api/sessions")]
+[Route("api/[controller]")]
 public class SessionsController : ControllerBase
 {
     private readonly ISessionService _sessionService;
