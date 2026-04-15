@@ -39,7 +39,7 @@ public class SessionsController : ControllerBase
         var hostId = await GetCurrentHostIdAsync(ct);
         if (hostId is null)
         {
-            return Unauthorized();
+            throw new NotHostException();
         }
 
         var result = await _sessionService.CreateSessionAsync(request, hostId.Value);
@@ -70,7 +70,7 @@ public class SessionsController : ControllerBase
         var hostId = await GetCurrentHostIdAsync(ct);
         if (hostId is null)
         {
-            return Unauthorized();
+            throw new NotHostException();
         }
 
         var validPin = Pin.Create(pin);
@@ -88,7 +88,7 @@ public class SessionsController : ControllerBase
         var hostId = await GetCurrentHostIdAsync(ct);
         if (hostId is null)
         {
-            return Unauthorized();
+            throw new NotHostException();
         }
 
         var result = await _sessionService.CancelSessionAsync(pin, hostId.Value, ct);
