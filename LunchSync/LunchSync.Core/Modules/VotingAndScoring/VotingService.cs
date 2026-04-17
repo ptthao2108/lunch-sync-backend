@@ -1,6 +1,7 @@
 ﻿using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Interfaces;
 using LunchSync.Core.Exceptions;
+using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.VotingAndScoring.Config;
 using LunchSync.Core.Modules.VotingAndScoring.Scoring;
 
@@ -10,15 +11,17 @@ public sealed class VotingService : IVotingService
     private readonly IUnitOfWork _uow;
     private readonly ScoringEngine _engine;
     private readonly SessionScoringService _scoringService;
+    private readonly ISessionCache _sessionCache;
 
     public VotingService(
         IUnitOfWork uow,
         ScoringEngine engine,
-        SessionScoringService scoringService)
+        SessionScoringService scoringService, ISessionCache sessionCache)
     {
         _uow = uow;
         _engine = engine;
         _scoringService = scoringService;
+        _sessionCache = sessionCache;
     }
 
     // ── GET choices ───────────────────────────────────────────────────────────
@@ -31,7 +34,7 @@ public sealed class VotingService : IVotingService
     // ── POST vote ─────────────────────────────────────────────────────────────
 
     public async Task<VoteResultDto> SubmitVoteAsync(
-        Guid sessionId,
+        string pin,
         Guid participantId,
         string choices,
         CancellationToken ct = default)
@@ -40,14 +43,16 @@ public sealed class VotingService : IVotingService
         ScoringEngine.ValidateChoices(choices);
 
         // ── Load session (includes Participants) ──────────────────────────────
-        var session = await _uow.Sessions.GetSessionByIdAsync(sessionId, ct)
-            ?? throw new SessionNotFoundByIdException(sessionId);
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
+            ?? throw new SessionNotFoundException(pin);
+
+        session.Participants = await _sessionCache.GetParticipantsAsync(pin, ct);
 
         if (session.Status != SessionStatus.Voting)
-            throw new BusinessRuleViolationException("Session is not accepting votes right now.");
+            throw new VoteNotReadyException("Session is not accepting votes right now.");
 
         var participant = session.Participants.FirstOrDefault(p => p.Id == participantId)
-            ?? throw new BusinessRuleViolationException($"Participant '{participantId}' not found in session.");
+            ?? throw new ParticipantNotFoundException(participantId);
 
         if (participant.VotedAt is not null)
             throw new BusinessRuleViolationException("Participant has already voted.");
@@ -79,29 +84,29 @@ public sealed class VotingService : IVotingService
         bool allVoted = totalVoted >= totalParticipants;
 
         if (allVoted)
-            await _scoringService.RunAsync(sessionId, ct);
+            await _scoringService.RunAsync(pin, ct);
 
         return new VoteResultDto(totalVoted, totalParticipants, ScoringTriggered: allVoted);
     }
 
     // ── POST close-voting (host lazy evaluation) ──────────────────────────────
 
-    public async Task CloseVotingAsync(Guid sessionId, Guid hostUserId, CancellationToken ct = default)
+    public async Task CloseVotingAsync(string pin, Guid hostUserId, CancellationToken ct = default)
     {
-        var session = await _uow.Sessions.GetSessionByIdAsync(sessionId, ct)
-            ?? throw new SessionNotFoundByIdException(sessionId);
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
+            ?? throw new SessionNotFoundException(pin);
 
         if (session.HostId != hostUserId)
-            throw new BusinessRuleViolationException("Only the host can close voting.");
+            throw new NotHostException();
 
         if (session.Status != SessionStatus.Voting)
-            throw new BusinessRuleViolationException("Session is not in Voting state.");
+            throw new VoteNotReadyException("Session is not in Voting state.");
 
         int voted = session.Participants.Count(p => p.VotedAt is not null);
 
         if (voted == 0)
-            throw new BusinessRuleViolationException("No participants have voted yet.");
+            throw new VoteNotReadyException("No participants have voted yet.");
 
-        await _scoringService.RunAsync(sessionId, ct);
+        await _scoringService.RunAsync(pin, ct);
     }
 }

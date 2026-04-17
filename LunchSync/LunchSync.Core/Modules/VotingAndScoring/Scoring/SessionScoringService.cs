@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using LunchSync.Core.Common.Enums;
 using LunchSync.Core.Common.Interfaces;
 using LunchSync.Core.Exceptions;
+using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.VotingAndScoring.Config;
 
 namespace LunchSync.Core.Modules.VotingAndScoring.Scoring;
@@ -21,28 +22,31 @@ public sealed class SessionScoringService
     private readonly IDishProfileCache _dishCache;
     private readonly ScoringEngine _engine;
     private readonly RestaurantMatcher _matcher;
+    private readonly ISessionCache _sessionCache;
 
     public SessionScoringService(
         IUnitOfWork uow,
         IDishProfileCache dishCache,
         ScoringEngine engine,
-        RestaurantMatcher matcher)
+        RestaurantMatcher matcher, ISessionCache sessionCache)
     {
         _uow = uow;
         _dishCache = dishCache;
         _engine = engine;
         _matcher = matcher;
+        _sessionCache = sessionCache;
     }
 
-    public async Task RunAsync(Guid sessionId, CancellationToken ct = default)
+    public async Task RunAsync(string pin, CancellationToken ct = default)
     {
         // ── 1. Load session ───────────────────────────────────────────────────
-        var session = await _uow.Sessions.GetSessionByIdAsync(sessionId, ct)
-                ?? throw new SessionNotFoundByIdException(sessionId);
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
+                ?? throw new SessionNotFoundException(pin);
 
         if (session.Status != SessionStatus.Voting)
-            throw new BusinessRuleViolationException("Session is not in Voting state.");
+            throw new VoteNotReadyException("Session is not in Voting state.");
 
+        session.Participants = await _sessionCache.GetParticipantsAsync(pin, ct);
 
         // ── 2. Collect individual vectors ────────────────────────────────────
         // Participant.PrefVector is List<float>? — convert to double[] for the engine
@@ -52,7 +56,7 @@ public sealed class SessionScoringService
             .ToList();
 
         if (vectors.Count == 0)
-            throw new BusinessRuleViolationException("No participant vectors found.");
+            throw new VoteNotReadyException("No participant vectors found.");
 
         // ── 3. Group aggregation + spicy veto ────────────────────────────────
         double[] effectiveVector = _engine.AggregateGroupVector(vectors);

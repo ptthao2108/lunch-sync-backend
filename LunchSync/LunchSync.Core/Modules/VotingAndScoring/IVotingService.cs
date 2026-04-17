@@ -15,7 +15,7 @@ public interface IVotingService
     /// If all participants have voted, triggers group aggregation + scoring.
     /// </summary>
     Task<VoteResultDto> SubmitVoteAsync(
-        Guid sessionId,
+        string pin,
         Guid participantId,
         string choices,
         CancellationToken ct = default);
@@ -24,5 +24,5 @@ public interface IVotingService
     /// Host manually closes voting (lazy evaluation fallback).
     /// Runs scoring on participants who have voted so far.
     /// </summary>
-    Task CloseVotingAsync(Guid sessionId, Guid hostUserId, CancellationToken ct = default);
+    Task CloseVotingAsync(string pin, Guid hostUserId, CancellationToken ct = default);
 }
