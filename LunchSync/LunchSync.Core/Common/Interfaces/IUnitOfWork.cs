@@ -1,4 +1,5 @@
-﻿using LunchSync.Core.Modules.RestaurantsAndDishes;
+﻿using LunchSync.Core.Modules.Auth.Interfaces;
+using LunchSync.Core.Modules.RestaurantsAndDishes;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Repositories;
 using LunchSync.Core.Modules.Sessions;
 
@@ -6,9 +7,12 @@ namespace LunchSync.Core.Common.Interfaces;
 public interface IUnitOfWork : IAsyncDisposable
 {
     ISessionRepository Sessions { get; }
+    ISessionCache SessionsCache { get; }
     IDishRepository Dishes { get; }
     IRestaurantRepository Restaurants { get; }
     ICollectionRepository Collections { get; }
+    IUserRepository Users { get; }
+    ICurrentUserService CurrentUser { get; }
 
     /// <summary>Persist mọi thay đổi đang tracked trong transaction hiện tại.</summary>
     Task<int> SaveChangesAsync(CancellationToken ct = default);
