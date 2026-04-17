@@ -68,9 +68,29 @@ public class SessionCache : ISessionCache
         var key = RedisKeyBuilder.Data(pin);
         var data = await _db.HashGetAllAsync(key);
         if (data.Length == 0)
-        { return null; }
+        {
+            return null;
+        }
 
         var dict = data.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+
+        // Helper to parse list fields
+        List<T>? ParseJsonList<T>(string fieldName)
+        {
+            if (dict.TryGetValue(fieldName, out var json) && !string.IsNullOrEmpty(json))
+            {
+                try
+                {
+                    return JsonSerializer.Deserialize<List<T>>(json);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            return null;
+        }
 
         return new Session
         {
@@ -81,7 +101,10 @@ public class SessionCache : ISessionCache
             CreatedAt = dict.TryGetValue("CreatedAt", out var tc) ? DateTime.Parse(tc) : DateTime.UtcNow,
             ExpiresAt = dict.TryGetValue("ExpiresAt", out var te) ? DateTime.Parse(te) : DateTime.MinValue,
             CollectionId = dict.TryGetValue("CollectionId", out var cId) ? Guid.Parse(cId) : Guid.Empty,
-            PriceTier = dict.TryGetValue("PriceTier", out var pt) ? Enum.Parse<PriceTier>(pt) : PriceTier.Under40k
+            PriceTier = dict.TryGetValue("PriceTier", out var pt) ? Enum.Parse<PriceTier>(pt) : PriceTier.Under40k,
+            GroupVector = ParseJsonList<float>("GroupVector"),
+            TopDishIds = ParseJsonList<Guid>("TopDishIds"),
+            TopRestaurantIds = ParseJsonList<Guid>("TopRestaurantIds")
         };
     }
     public async Task RemoveSessionAsync(string pin)
@@ -179,5 +202,34 @@ public class SessionCache : ISessionCache
 
         await transaction.ExecuteAsync();
 
+    }
+
+    public async Task UpdateScoringResultsAsync(string pin, List<float> groupVector, List<Guid> topDishIds, List<Guid> topRestaurantIds, int expireMinutes)
+    {
+        var key = RedisKeyBuilder.Data(pin);
+        var participantKey = RedisKeyBuilder.Participants(pin);
+        var nameKey = RedisKeyBuilder.Names(pin);
+
+        // 1. Convert lists to JSON for storage
+        var groupVectorJson = JsonSerializer.Serialize(groupVector);
+        var topDishIdsJson = JsonSerializer.Serialize(topDishIds);
+        var topRestaurantIdsJson = JsonSerializer.Serialize(topRestaurantIds);
+
+        // 2. Update session hash with scoring results
+        var entries = new HashEntry[]
+        {
+            new("GroupVector", groupVectorJson),
+            new("TopDishIds", topDishIdsJson),
+            new("TopRestaurantIds", topRestaurantIdsJson),
+            new("Status", (int)SessionStatus.Results)
+        };
+
+        await _db.HashSetAsync(key, entries);
+
+        // 3. Update TTL for all related keys
+        var ttl = TimeSpan.FromMinutes(expireMinutes);
+        await _db.KeyExpireAsync(key, ttl);
+        await _db.KeyExpireAsync(participantKey, ttl);
+        await _db.KeyExpireAsync(nameKey, ttl);
     }
 }

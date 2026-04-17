@@ -96,15 +96,9 @@ public sealed class SessionScoringService
 
         var top5Ids = top5.Select(x => x.RestaurantId).ToList();
 
-        // ── 7. Persist (spec §6.7) — single attach + targeted updates ────────
-        // Session was loaded AsNoTracking, so we attach and mark only changed columns.
-
-        // GroupVector stored as List<float> on the entity
+        // ── 7. Persist (spec §6.7) — update cache instead of database ────────
         var groupVectorAsFloat = effectiveVector.Select(d => (float)d).ToList();
 
-        await _uow.Sessions.UpdateSessionAsync(session, s => s.GroupVector, groupVectorAsFloat);
-        await _uow.Sessions.UpdateSessionAsync(session, s => s.TopDishIds, top3Ids);
-        await _uow.Sessions.UpdateSessionAsync(session, s => s.TopRestaurantIds, top5Ids);
-        await _uow.Sessions.UpdateSessionAsync(session, s => s.Status, SessionStatus.Results);
+        await _sessionCache.UpdateScoringResultsAsync(pin, groupVectorAsFloat, top3Ids, top5Ids, expireMinutes: 30);
     }
 }
