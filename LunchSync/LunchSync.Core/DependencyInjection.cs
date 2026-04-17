@@ -1,3 +1,5 @@
+using LunchSync.Core.Modules.Auth;
+using LunchSync.Core.Modules.Auth.Interfaces;
 using LunchSync.Core.Modules.RestaurantsAndDishes;
 using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.VotingAndScoring;
@@ -10,7 +12,8 @@ namespace LunchSync.Core
     {
         public static IServiceCollection AddCoreServices(this IServiceCollection services)
         {
-            // Dang ky cac service can cho collection va session.
+            // Dang ky cac service can cho auth, collection va session.
+            services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ISessionService, SessionService>();
 
             services.AddScoped<IRestaurantService, RestaurantService>();

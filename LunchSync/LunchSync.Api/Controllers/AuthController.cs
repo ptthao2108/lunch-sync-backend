@@ -12,14 +12,54 @@ namespace LunchSync.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly ICurrentUserService _currentUser;
+    private readonly IAuthService _authService;
     private readonly IUserRepository _userRepository;
 
     public AuthController(
         ICurrentUserService currentUser,
+        IAuthService authService,
         IUserRepository userRepository)
     {
         _currentUser = currentUser;
+        _authService = authService;
         _userRepository = userRepository;
+    }
+
+    [AllowAnonymous]
+    [HttpPost("callback")]
+    [ProducesResponseType(typeof(AuthTokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ExchangeCode(
+        [FromQuery] string code,
+        CancellationToken cancellationToken)
+    {
+        var request = new AuthCallbackRequest(code);
+        var response = await _authService.ExchangeCodeAsync(request, cancellationToken);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(AuthTokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RefreshToken(
+        [FromBody] RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _authService.RefreshTokenAsync(request, cancellationToken);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("revoke")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RevokeToken(
+        [FromBody] RevokeTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _authService.RevokeTokenAsync(request, cancellationToken);
+        return NoContent();
     }
 
     [Authorize(Policy = AuthPolicies.CognitoUser)]
