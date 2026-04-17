@@ -62,6 +62,7 @@ public class SessionService : ISessionService
             PriceTier = request.PriceTier
         };
         await _repository.SaveSessionAsync(session);
+        await _cache.SaveActiveSessionAsync(session, DefaultExpiryMinutes);
 
         var host = new Participant
         {
@@ -74,8 +75,6 @@ public class SessionService : ISessionService
 
         await _cache.TryJoinAtomicAsync(pin, host, MaxParticipants, DefaultExpiryMinutes);
         await _repository.SaveParticipantAsync(host);
-
-        await _cache.SaveActiveSessionAsync(session, DefaultExpiryMinutes);
 
         var sessionUpdate = await _cache.GetActiveSessionByPinAsync(pin) ?? throw new SessionNotFoundException(pin);
 
