@@ -3,6 +3,7 @@ using LunchSync.Core.Modules.Auth.Interfaces;
 using LunchSync.Core.Modules.RestaurantsAndDishes;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Repositories;
 using LunchSync.Core.Modules.Sessions;
+using LunchSync.Core.Modules.VotingAndScoring;
 using LunchSync.Infrastructure.Auth;
 using LunchSync.Infrastructure.Persistence;
 using LunchSync.Infrastructure.Persistence.Caching;
@@ -49,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddHttpClient<ICognitoOAuthProvider, CognitoOAuthProvider>();
         services.AddScoped<ISessionCache, SessionCache>();
+        services.AddSingleton<IDishProfileCache, InMemoryDishProfileCache>();
+        services.AddHostedService<DishProfileCacheWarmupService>();
 
         return services;
     }
