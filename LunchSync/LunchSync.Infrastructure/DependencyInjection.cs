@@ -3,16 +3,12 @@ using LunchSync.Core.Modules.Auth.Interfaces;
 using LunchSync.Core.Modules.RestaurantsAndDishes;
 using LunchSync.Core.Modules.RestaurantsAndDishes.Repositories;
 using LunchSync.Core.Modules.Sessions;
-using LunchSync.Core.Modules.VotingAndScoring;
-using LunchSync.Infrastructure.Auth;
 using LunchSync.Infrastructure.Persistence;
 using LunchSync.Infrastructure.Persistence.Caching;
 using LunchSync.Infrastructure.Persistence.Repositories;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
 using StackExchange.Redis;
 
 namespace LunchSync.Infrastructure;
@@ -50,15 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ICollectionRepository, CollectionRepository>();
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddHttpClient<ICognitoAuthProvider, CognitoAuthProvider>();
-        services.AddScoped<IPendingRegistrationStore, PendingRegistrationStore>();
         services.AddScoped<ISessionCache, SessionCache>();
-
-        // -- Caching --
-        services.AddSingleton<IDishProfileCache, InMemoryDishProfileCache>();
-        services.AddHostedService<DishProfileCacheWarmupService>();
-        // -- Auth (Cognito) --
-        //services.AddScoped<ICognitoAuthProvider, CognitoAuthProvider>();
 
         return services;
     }

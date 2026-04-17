@@ -1,10 +1,7 @@
-﻿using LunchSync.Core.Modules.Auth;
-using LunchSync.Core.Modules.Auth.Interfaces;
 using LunchSync.Core.Modules.RestaurantsAndDishes;
 using LunchSync.Core.Modules.Sessions;
 using LunchSync.Core.Modules.VotingAndScoring;
 using LunchSync.Core.Modules.VotingAndScoring.Scoring;
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LunchSync.Core
@@ -13,8 +10,7 @@ namespace LunchSync.Core
     {
         public static IServiceCollection AddCoreServices(this IServiceCollection services)
         {
-            // Dang ky cac service can cho auth, collection va session.
-            services.AddScoped<IAuthService, AuthService>();
+            // Dang ky cac service can cho collection va session.
             services.AddScoped<ISessionService, SessionService>();
 
             services.AddScoped<IRestaurantService, RestaurantService>();
@@ -23,7 +19,7 @@ namespace LunchSync.Core
             services.AddScoped<IResultsService, ResultsService>();
             services.AddScoped<IVotingService, VotingService>();
 
-            // Pure stateless — Singleton
+            // Pure stateless - Singleton
             services.AddSingleton<ScoringEngine>();
             services.AddSingleton<RestaurantMatcher>();
             services.AddScoped<SessionScoringService>();
