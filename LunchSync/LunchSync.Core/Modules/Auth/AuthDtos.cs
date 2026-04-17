@@ -1,4 +1,6 @@
-﻿namespace LunchSync.Core.Modules.Auth;
+using System.Text.Json.Serialization;
+
+namespace LunchSync.Core.Modules.Auth;
 
 public sealed record AuthCallbackRequest(
     [property: JsonPropertyName("code")]
