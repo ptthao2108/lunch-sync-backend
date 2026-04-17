@@ -5,7 +5,7 @@ namespace LunchSync.Core.Modules.Sessions;
 
 public static class SessionsMappers
 {
-    public static CreateSessionRes ToCreateSessionRes(this Session session, Guid participantId, string collectionName, string baseUrl)
+    public static CreateSessionRes ToCreateSessionRes(this Session session, string collectionName, string baseUrl)
     {
         return new CreateSessionRes
         {
@@ -14,7 +14,6 @@ public static class SessionsMappers
             ShareLink = $"{baseUrl}/{session.Pin}",
             Status = session.Status.ToString().ToLower(),
             CollectionName = collectionName,
-            participantId = participantId,
         };
     }
     public static JoinRes ToJoinRes(this Participant participant, Session session)
@@ -28,6 +27,7 @@ public static class SessionsMappers
             {
                 Nickname = p.Nickname,
                 JoinedAt = p.JoinedAt,
+                Id = participant.Id,
                 IsHost = p.UserId == session.HostId,
             }).ToList()
         };

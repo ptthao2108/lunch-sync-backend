@@ -82,6 +82,8 @@ public class ParticipantRes
 
     [JsonPropertyName("nickname")]
     public string Nickname { get; set; } = string.Empty;
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
 
     [JsonPropertyName("joined_at")]
     public DateTime JoinedAt { get; set; }

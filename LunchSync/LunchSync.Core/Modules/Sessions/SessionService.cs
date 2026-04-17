@@ -79,7 +79,7 @@ public class SessionService : ISessionService
         var sessionUpdate = await _cache.GetActiveSessionByPinAsync(pin) ?? throw new SessionNotFoundException(pin);
 
         var baseUrl = _configuration["AppSettings:ClientBaseUrl"];
-        return sessionUpdate.ToCreateSessionRes(host.Id,collection.Name ?? "", baseUrl ?? "");
+        return sessionUpdate.ToCreateSessionRes(collection.Name ?? "", baseUrl ?? "");
 
     }
     public async Task<JoinRes> JoinSessionAsync(Guid? userId, string pin, JoinReq request, CancellationToken ct = default)
