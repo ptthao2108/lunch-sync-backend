@@ -1,5 +1,7 @@
 ﻿using LunchSync.Core.Common.Auth;
 using LunchSync.Core.Common.Interfaces;
+using LunchSync.Core.Exceptions;
+using LunchSync.Core.Modules.Auth.Interfaces;
 using LunchSync.Core.Modules.VotingAndScoring;
 
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +16,15 @@ namespace LunchSync.Api.Controllers;
 public sealed class VotingController : ControllerBase
 {
     private readonly IVotingService _votingService;
-
-    public VotingController(IVotingService votingService)
+    private readonly ICurrentUserService _currentUser;
+    private readonly IUserRepository _userRepository;
+    public VotingController(IVotingService votingService,
+        ICurrentUserService currentUser,
+        IUserRepository userRepository)
     {
         _votingService = votingService;
+        _currentUser = currentUser;
+        _userRepository = userRepository;
     }
 
     /// <summary>GET the 8 binary choice questions.</summary>
@@ -40,8 +47,7 @@ public sealed class VotingController : ControllerBase
         [FromBody] SubmitVoteRequest request,
         CancellationToken ct)
     {
-        var participantId = GetParticipantId();
-        var result = await _votingService.SubmitVoteAsync(pin, participantId, request.Choices, ct);
+        var result = await _votingService.SubmitVoteAsync(pin, request.participantId, request.Choices, ct);
         return Ok(result);
     }
 
@@ -52,24 +58,23 @@ public sealed class VotingController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CloseVoting([FromRoute] string pin, CancellationToken ct)
     {
-        var hostUserId = GetUserId();
-        await _votingService.CloseVotingAsync(pin, hostUserId, ct);
+        var hostId = await GetCurrentHostIdAsync(ct);
+        if (hostId is null)
+        {
+            throw new NotHostException();
+        }
+        await _votingService.CloseVotingAsync(pin, hostId.Value, ct);
         return NoContent();
     }
-
-    // ── Helpers
-    private Guid GetParticipantId()
+    private async Task<Guid?> GetCurrentHostIdAsync(CancellationToken cancellationToken)
     {
-        var claim = User.FindFirst("participant_id")?.Value
-            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException("participant_id claim missing.");
-        return Guid.Parse(claim);
-    }
+        // Token Cognito chi mang sub, nen can map ve user local trong database.
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return null;
+        }
 
-    private Guid GetUserId()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException("sub claim missing.");
-        return Guid.Parse(claim);
+        var user = await _userRepository.GetByCognitoSubAsync(_currentUser.UserId, cancellationToken);
+        return user?.Id;
     }
 }
