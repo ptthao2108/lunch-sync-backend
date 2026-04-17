@@ -1,10 +1,9 @@
-﻿using LunchSync.Core.Common.Auth;
+using LunchSync.Core.Common.Auth;
 using LunchSync.Core.Common.Interfaces;
 using LunchSync.Core.Modules.Auth;
 using LunchSync.Core.Modules.Auth.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace LunchSync.Api.Controllers;
 
@@ -13,90 +12,35 @@ namespace LunchSync.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly ICurrentUserService _currentUser;
-    private readonly IAuthService _authService;
+    private readonly IUserRepository _userRepository;
 
     public AuthController(
         ICurrentUserService currentUser,
-        IAuthService authService)
+        IUserRepository userRepository)
     {
         _currentUser = currentUser;
-        _authService = authService;
+        _userRepository = userRepository;
     }
 
     [Authorize(Policy = AuthPolicies.CognitoUser)]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
+        {
             return Unauthorized();
+        }
+
+        var localUser = string.IsNullOrWhiteSpace(_currentUser.CognitoSub)
+            ? null
+            : await _userRepository.GetByCognitoSubAsync(_currentUser.CognitoSub, cancellationToken);
 
         return Ok(new CurrentUserResponse(
-            _currentUser.LocalUserId,
+            localUser?.Id,
             _currentUser.CognitoSub,
-            _currentUser.Email,
-            _currentUser.Name,
-            _currentUser.Role,
-            _currentUser.IsActive));
+            localUser?.Email ?? _currentUser.Email,
+            localUser?.FullName ?? _currentUser.Name,
+            localUser?.Role.ToString().ToLowerInvariant() ?? _currentUser.Role,
+            localUser?.IsActive ?? _currentUser.IsActive));
     }
-
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-public")]
-    [HttpPost("register")]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _authService.RegisterAsync(
-            request ?? new RegisterRequest(string.Empty, string.Empty, null),
-            cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, response);
-    }
-
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-public")]
-    [HttpPost("verify-otp")]
-    [ProducesResponseType(typeof(VerifyOtpResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> VerifyOtp(
-        [FromBody] VerifyOtpRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _authService.VerifyOtpAsync(
-            request ?? new VerifyOtpRequest(string.Empty, string.Empty),
-            cancellationToken);
-        return Ok(response);
-    }
-
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-public")]
-    [HttpPost("resend-otp")]
-    [ProducesResponseType(typeof(ResendOtpResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ResendOtp(
-        [FromBody] ResendOtpRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _authService.ResendOtpAsync(
-            request ?? new ResendOtpRequest(string.Empty),
-            cancellationToken);
-        return Ok(response);
-    }
-
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-public")]
-    [HttpPost("login")]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Login(
-        [FromBody] LoginRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _authService.LoginAsync(
-            request ?? new LoginRequest(string.Empty, string.Empty),
-            cancellationToken);
-        return Ok(response);
-    }
-
 }
