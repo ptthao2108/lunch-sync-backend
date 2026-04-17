@@ -100,5 +100,6 @@ public sealed class SessionScoringService
         var groupVectorAsFloat = effectiveVector.Select(d => (float)d).ToList();
 
         await _sessionCache.UpdateScoringResultsAsync(pin, groupVectorAsFloat, top3Ids, top5Ids, expireMinutes: 30);
+        await _sessionCache.UpdateStatusAndExpireAsync(pin, SessionStatus.Results, expireMinutes:5);
     }
 }
