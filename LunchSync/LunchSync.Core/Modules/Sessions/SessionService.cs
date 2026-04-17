@@ -138,6 +138,7 @@ public class SessionService : ISessionService
 
         var sessionUpdate = await _cache.GetActiveSessionByPinAsync(pin, ct) ?? throw new SessionNotFoundException(pin);
         sessionUpdate.Participants = participants;
+        sessionUpdate.VotingStartedAt = DateTime.UtcNow;
 
         return sessionUpdate.ToStartRes();
     }
