@@ -37,6 +37,8 @@ public class CreateSessionRes
 
     [JsonPropertyName("collection_name")]
     public string CollectionName { get; set; } = string.Empty;
+    [JsonPropertyName("participant_id")]
+    public Guid ParticipantId { get; set; }
 }
 
 public class JoinReq
