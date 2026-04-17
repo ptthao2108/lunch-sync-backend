@@ -53,13 +53,15 @@ public sealed class CognitoOAuthProvider : ICognitoOAuthProvider
         RevokeTokenRequest request,
         CancellationToken cancellationToken = default)
     {
-        var formValues = CreateBaseClientForm();
-        formValues["token"] = request.RefreshToken.Trim();
-
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint("/oauth2/revoke"))
+        var formValues = new Dictionary<string, string>
         {
-            Content = new FormUrlEncodedContent(formValues)
+            ["token"] = request.RefreshToken.Trim()
         };
+
+        using var httpRequest = CreateClientAuthenticatedRequest(
+            HttpMethod.Post,
+            BuildEndpoint("/oauth2/revoke"),
+            formValues);
 
         using var response = await SendAsync(httpRequest, cancellationToken);
         if (response.IsSuccessStatusCode)
@@ -106,10 +108,10 @@ public sealed class CognitoOAuthProvider : ICognitoOAuthProvider
         string errorField,
         CancellationToken cancellationToken)
     {
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint("/oauth2/token"))
-        {
-            Content = new FormUrlEncodedContent(formValues)
-        };
+        using var httpRequest = CreateClientAuthenticatedRequest(
+            HttpMethod.Post,
+            BuildEndpoint("/oauth2/token"),
+            formValues);
 
         using var response = await SendAsync(httpRequest, cancellationToken);
         var body = await ReadBodyAsync(response, cancellationToken);
@@ -142,13 +144,32 @@ public sealed class CognitoOAuthProvider : ICognitoOAuthProvider
             ["client_id"] = GetRequiredConfig("Cognito:ClientId")
         };
 
-        var clientSecret = _configuration["Cognito:ClientSecret"];
-        if (!string.IsNullOrWhiteSpace(clientSecret))
+        return formValues;
+    }
+
+    private HttpRequestMessage CreateClientAuthenticatedRequest(
+        HttpMethod method,
+        string endpoint,
+        IReadOnlyDictionary<string, string> formValues)
+    {
+        var clientId = GetRequiredConfig("Cognito:ClientId");
+        var clientSecret = _configuration["Cognito:ClientSecret"]?.Trim();
+        var contentValues = new Dictionary<string, string>(formValues);
+
+        var request = new HttpRequestMessage(method, endpoint);
+        if (string.IsNullOrWhiteSpace(clientSecret))
         {
-            formValues["client_secret"] = clientSecret;
+            contentValues["client_id"] = clientId;
+        }
+        else
+        {
+            var credentials = Convert.ToBase64String(
+                System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         }
 
-        return formValues;
+        request.Content = new FormUrlEncodedContent(contentValues);
+        return request;
     }
 
     private string BuildEndpoint(string path)
