@@ -27,7 +27,7 @@ public static class SessionsMappers
             {
                 Nickname = p.Nickname,
                 JoinedAt = p.JoinedAt,
-                Id = participant.Id,
+                Id = p.Id,
                 IsHost = p.UserId == session.HostId,
             }).ToList()
         };
@@ -60,6 +60,7 @@ public static class SessionsMappers
             {
                 Nickname = p.Nickname,
                 JoinedAt = p.JoinedAt,
+                Id = p.Id,
                 IsHost = p.UserId == session.HostId,
             }).ToList(),
             ParticipantCount = session.Participants.Count,
