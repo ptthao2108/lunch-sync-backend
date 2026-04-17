@@ -12,7 +12,6 @@ namespace LunchSync.Api.Controllers;
 
 [ApiController]
 [Route("api/Sessions/{pin}")]
-[Authorize]
 public sealed class VotingController : ControllerBase
 {
     private readonly IVotingService _votingService;
