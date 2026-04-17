@@ -86,7 +86,7 @@ public sealed class VotingService : IVotingService
         if (allVoted)
             await _scoringService.RunAsync(pin, ct);
 
-        return new VoteResultDto(totalVoted, totalParticipants, ScoringTriggered: allVoted);
+        return new VoteResultDto("Voted",totalParticipants, totalVoted, ScoringTriggered: allVoted);
     }
 
     // ── POST close-voting (host lazy evaluation) ──────────────────────────────

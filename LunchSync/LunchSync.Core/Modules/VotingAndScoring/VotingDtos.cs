@@ -27,9 +27,9 @@ public sealed record BinaryChoiceDto(
 
 /// <summary>Response after a participant submits their vote.</summary>
 public sealed record VoteResultDto(
-    [property: JsonPropertyName("index")] int TotalVoted,
+    [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("total_participants")] int TotalParticipants,
-
+    [property: JsonPropertyName("total_voted")] int TotalVoted,
     /// <summary>True when this vote triggered scoring (all participants voted).</summary>
     [property: JsonPropertyName("scoring_triggered")] bool ScoringTriggered
 );

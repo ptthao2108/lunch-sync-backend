@@ -35,6 +35,7 @@ public class SessionCache : ISessionCache
         new("Status", (int)session.Status),
         new("CreatedAt", session.CreatedAt.ToString("O")),
         new("ExpiresAt", session.ExpiresAt?.ToString("O") ?? ""),
+        new("VotingStartedAt", session.VotingStartedAt?.ToString("O") ?? ""),
         new("CollectionId", session.CollectionId.ToString()),
         new("PriceTier", (int)session.PriceTier)
         };
@@ -80,6 +81,7 @@ public class SessionCache : ISessionCache
             Status = dict.TryGetValue("Status", out var st) ? Enum.Parse<SessionStatus>(st) : SessionStatus.Waiting,
             CreatedAt = dict.TryGetValue("CreatedAt", out var tc) ? DateTime.Parse(tc) : DateTime.UtcNow,
             ExpiresAt = dict.TryGetValue("ExpiresAt", out var te) ? DateTime.Parse(te) : DateTime.MinValue,
+            VotingStartedAt = dict.TryGetValue("VotingStartedAt", out var tv) ? DateTime.Parse(tv) : DateTime.MinValue,
             CollectionId = dict.TryGetValue("CollectionId", out var cId) ? Guid.Parse(cId) : Guid.Empty,
             PriceTier = dict.TryGetValue("PriceTier", out var pt) ? Enum.Parse<PriceTier>(pt) : PriceTier.Under40k
         };
