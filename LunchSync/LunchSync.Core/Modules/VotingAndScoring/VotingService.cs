@@ -104,6 +104,7 @@ public sealed class VotingService : IVotingService
         if (session.Status != SessionStatus.Voting)
             throw new VoteNotReadyException("Session is not in Voting state.");
 
+        session.Participants = await _sessionCache.GetParticipantsAsync(pin);
         int voted = session.Participants.Count(p => p.VotedAt is not null);
 
         if (voted == 0)
