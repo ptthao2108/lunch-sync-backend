@@ -14,4 +14,5 @@ public interface ISessionCache
     Task<List<Participant>> GetParticipantsAsync(string pin, CancellationToken ct = default);
     Task RemoveSessionAsync(string pin);
     Task<int> TryJoinAtomicAsync(string pin, Participant participant, int maxParticipants, int expireMinutes);
+    Task UpdateParticipantPrefVectorAsync(string pin, Participant participant, List<float> prefVector);
 }

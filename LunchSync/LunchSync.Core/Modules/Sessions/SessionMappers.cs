@@ -38,7 +38,7 @@ public static class SessionsMappers
         {
             Status = session.Status.ToString().ToLower(),
             ParticipantsJoined = session.Participants.Count,
-            ParticipantsVoted = session.GroupVector?.Count ?? 0,
+            ParticipantsVoted = session.Participants.Count(p => p.PrefVector != null),
             VotingStartedAt = session.VotingStartedAt
         };
     }

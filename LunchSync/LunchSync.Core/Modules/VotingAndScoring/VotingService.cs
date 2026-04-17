@@ -74,7 +74,9 @@ public sealed class VotingService : IVotingService
         participant.VotedAt = DateTime.UtcNow;
 
         await _uow.Sessions.UpdateParticipantVoteAsync(participant, ct);
+        await _sessionCache.UpdateParticipantPrefVectorAsync(pin, participant, participant.PrefVector);
 
+        session.Participants = await _sessionCache.GetParticipantsAsync(pin);
         // ── Check if all have voted ───────────────────────────────────────────
         // Re-read counts from the in-memory list; participant we just updated is
         // already mutated above, so the count is accurate.

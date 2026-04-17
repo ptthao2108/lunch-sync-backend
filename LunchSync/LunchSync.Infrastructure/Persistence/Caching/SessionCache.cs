@@ -153,4 +153,31 @@ public class SessionCache : ISessionCache
         await _db.KeyExpireAsync(participantKey, ttl);
         await _db.KeyExpireAsync(nameKey, ttl);
     }
+
+    public async Task UpdateParticipantPrefVectorAsync(string pin, Participant participant, List<float> prefVector)
+    {
+        var participantKey = RedisKeyBuilder.Participants(pin);
+
+        // 1. Lấy tất cả các chuỗi JSON đang có trong Set
+        var members = await _db.SetMembersAsync(participantKey);
+
+        // 2. Tìm chuỗi JSON cũ của Participant này (dựa vào Id)
+        // Phải tìm đúng chuỗi "nguyên bản" trong Redis mới dùng SREM xóa được
+        var oldJson = members.FirstOrDefault(m =>
+            JsonSerializer.Deserialize<Participant>(m!)?.Id == participant.Id);
+
+        if (oldJson.IsNull)
+            return; // Không tìm thấy thì không làm gì cả
+
+        // 3. Tạo chuỗi JSON mới từ object đã có PrefVector mới
+        var newJson = JsonSerializer.Serialize(participant);
+
+        // 4. Thực hiện thay thế (Atomic)
+        var transaction = _db.CreateTransaction();
+        _ = transaction.SetRemoveAsync(participantKey, oldJson); // Xóa bản cũ (có PrefVector cũ hoặc null)
+        _ = transaction.SetAddAsync(participantKey, newJson);    // Thêm bản mới (có PrefVector mới)
+
+        await transaction.ExecuteAsync();
+
+    }
 }
