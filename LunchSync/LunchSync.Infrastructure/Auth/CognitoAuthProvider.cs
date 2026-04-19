@@ -1,7 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
 using LunchSync.Core.Exceptions;
 using LunchSync.Core.Modules.Auth;
 using LunchSync.Core.Modules.Auth.Interfaces;
@@ -12,21 +13,16 @@ namespace LunchSync.Infrastructure.Auth;
 
 public sealed class CognitoAuthProvider : ICognitoAuthProvider
 {
-    private static readonly JsonSerializerOptions CognitoJsonOptions = new()
-    {
-        PropertyNamingPolicy = null
-    };
-
-    private readonly HttpClient _httpClient;
+    private readonly IAmazonCognitoIdentityProvider _cognitoClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<CognitoAuthProvider> _logger;
 
     public CognitoAuthProvider(
-        HttpClient httpClient,
+        IAmazonCognitoIdentityProvider cognitoClient,
         IConfiguration configuration,
         ILogger<CognitoAuthProvider> logger)
     {
-        _httpClient = httpClient;
+        _cognitoClient = cognitoClient;
         _configuration = configuration;
         _logger = logger;
     }
@@ -37,34 +33,31 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
     {
         LogCognitoConfigSnapshot("register");
 
-        var payload = new
+        try
         {
-            ClientId = GetRequiredConfig("Cognito:ClientId"),
-            SecretHash = BuildSecretHash(request.Email),
-            Username = request.Email,
-            Password = request.Password,
-            UserAttributes = BuildUserAttributes(request)
-        };
+            var response = await _cognitoClient.SignUpAsync(new SignUpRequest
+            {
+                ClientId = GetRequiredConfig("Cognito:ClientId"),
+                SecretHash = BuildSecretHash(request.Email),
+                Username = request.Email.Trim().ToLowerInvariant(),
+                Password = request.Password,
+                UserAttributes = BuildUserAttributes(request)
+            }, cancellationToken);
 
-        using var response = await SendCognitoRequestAsync(
-            "AWSCognitoIdentityProviderService.SignUp",
-            payload,
-            cancellationToken);
+            if (string.IsNullOrWhiteSpace(response.UserSub))
+            {
+                throw new InvalidOperationException("Cognito register did not return user sub.");
+            }
 
-        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
-        EnsureSuccess(response, document, request.Email);
-
-        var root = document.RootElement;
-        var userSub = root.GetProperty("UserSub").GetString();
-        if (string.IsNullOrWhiteSpace(userSub))
-        {
-            throw new InvalidOperationException("Cognito register did not return user sub.");
+            return new CognitoRegisterResult(
+                response.UserSub,
+                request.Email.Trim().ToLowerInvariant(),
+                request.FullName?.Trim());
         }
-
-        return new CognitoRegisterResult(
-            userSub,
-            request.Email.Trim().ToLowerInvariant(),
-            request.FullName?.Trim());
+        catch (Exception ex) when (TryMapCognitoException(ex, request.Email, out var mappedException))
+        {
+            throw mappedException;
+        }
     }
 
     public async Task<CognitoLoginResult> LoginAsync(
@@ -73,62 +66,54 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
     {
         LogCognitoConfigSnapshot("login");
 
-        var payload = new
+        try
         {
-            AuthFlow = _configuration["Cognito:AuthFlow"] ?? "USER_PASSWORD_AUTH",
-            ClientId = GetRequiredConfig("Cognito:ClientId"),
-            AuthParameters = BuildAuthParameters(request)
-        };
+            var response = await _cognitoClient.InitiateAuthAsync(new InitiateAuthRequest
+            {
+                AuthFlow = ResolveAuthFlow(),
+                ClientId = GetRequiredConfig("Cognito:ClientId"),
+                AuthParameters = BuildAuthParameters(request)
+            }, cancellationToken);
 
-        using var response = await SendCognitoRequestAsync(
-            "AWSCognitoIdentityProviderService.InitiateAuth",
-            payload,
-            cancellationToken);
+            var authResult = response.AuthenticationResult
+                ?? throw new InvalidOperationException("Cognito login did not return authentication result.");
 
-        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
-        EnsureSuccess(response, document, request.Email);
+            if (string.IsNullOrWhiteSpace(authResult.AccessToken))
+            {
+                throw new InvalidOperationException("Cognito login did not return access token.");
+            }
 
-        if (!document.RootElement.TryGetProperty("AuthenticationResult", out var authResult))
-        {
-            throw new InvalidOperationException("Cognito login did not return authentication result.");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var accessJwt = tokenHandler.ReadJwtToken(authResult.AccessToken);
+            var cognitoSub = accessJwt.Claims.FirstOrDefault(claim => claim.Type == "sub")?.Value;
+
+            string? email = null;
+            string? fullName = null;
+            if (!string.IsNullOrWhiteSpace(authResult.IdToken))
+            {
+                var idJwt = tokenHandler.ReadJwtToken(authResult.IdToken);
+                email = idJwt.Claims.FirstOrDefault(claim => claim.Type == "email")?.Value;
+                fullName = idJwt.Claims.FirstOrDefault(claim => claim.Type == "name")?.Value;
+            }
+
+            email ??= request.Email.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(cognitoSub) || string.IsNullOrWhiteSpace(email))
+            {
+                throw new InvalidOperationException("Cognito access token is missing required claims.");
+            }
+
+            return new CognitoLoginResult(
+                authResult.AccessToken,
+                authResult.ExpiresIn ?? 0,
+                cognitoSub,
+                email.Trim().ToLowerInvariant(),
+                fullName?.Trim());
         }
-
-        var accessToken = authResult.GetProperty("AccessToken").GetString();
-        var idToken = authResult.TryGetProperty("IdToken", out var idTokenElement)
-            ? idTokenElement.GetString()
-            : null;
-        var expiresIn = authResult.GetProperty("ExpiresIn").GetInt32();
-        if (string.IsNullOrWhiteSpace(accessToken))
+        catch (Exception ex) when (TryMapCognitoException(ex, request.Email, out var mappedException))
         {
-            throw new InvalidOperationException("Cognito login did not return access token.");
+            throw mappedException;
         }
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var accessJwt = tokenHandler.ReadJwtToken(accessToken);
-        var cognitoSub = accessJwt.Claims.FirstOrDefault(claim => claim.Type == "sub")?.Value;
-
-        string? email = null;
-        string? fullName = null;
-        if (!string.IsNullOrWhiteSpace(idToken))
-        {
-            var idJwt = tokenHandler.ReadJwtToken(idToken);
-            email = idJwt.Claims.FirstOrDefault(claim => claim.Type == "email")?.Value;
-            fullName = idJwt.Claims.FirstOrDefault(claim => claim.Type == "name")?.Value;
-        }
-
-        email ??= request.Email.Trim().ToLowerInvariant();
-
-        if (string.IsNullOrWhiteSpace(cognitoSub) || string.IsNullOrWhiteSpace(email))
-        {
-            throw new InvalidOperationException("Cognito access token is missing required claims.");
-        }
-
-        return new CognitoLoginResult(
-            accessToken,
-            expiresIn,
-            cognitoSub,
-            email.Trim().ToLowerInvariant(),
-            fullName?.Trim());
     }
 
     public async Task ConfirmSignUpAsync(
@@ -137,21 +122,20 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
     {
         LogCognitoConfigSnapshot("confirm-sign-up");
 
-        var payload = new
+        try
         {
-            ClientId = GetRequiredConfig("Cognito:ClientId"),
-            SecretHash = BuildSecretHash(request.Email),
-            Username = request.Email.Trim().ToLowerInvariant(),
-            ConfirmationCode = request.Otp.Trim()
-        };
-
-        using var response = await SendCognitoRequestAsync(
-            "AWSCognitoIdentityProviderService.ConfirmSignUp",
-            payload,
-            cancellationToken);
-
-        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
-        EnsureSuccess(response, document, request.Email);
+            await _cognitoClient.ConfirmSignUpAsync(new ConfirmSignUpRequest
+            {
+                ClientId = GetRequiredConfig("Cognito:ClientId"),
+                SecretHash = BuildSecretHash(request.Email),
+                Username = request.Email.Trim().ToLowerInvariant(),
+                ConfirmationCode = request.Otp.Trim()
+            }, cancellationToken);
+        }
+        catch (Exception ex) when (TryMapCognitoException(ex, request.Email, out var mappedException))
+        {
+            throw mappedException;
+        }
     }
 
     public async Task ResendConfirmationCodeAsync(
@@ -160,117 +144,62 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
     {
         LogCognitoConfigSnapshot("resend-confirmation-code");
 
-        var payload = new
+        try
         {
-            ClientId = GetRequiredConfig("Cognito:ClientId"),
-            SecretHash = BuildSecretHash(request.Email),
-            Username = request.Email.Trim().ToLowerInvariant()
-        };
-
-        using var response = await SendCognitoRequestAsync(
-            "AWSCognitoIdentityProviderService.ResendConfirmationCode",
-            payload,
-            cancellationToken);
-
-        using var document = await ReadResponseDocumentAsync(response, cancellationToken);
-        EnsureSuccess(response, document, request.Email);
-    }
-
-    private async Task<HttpResponseMessage> SendCognitoRequestAsync(
-        string target,
-        object payload,
-        CancellationToken cancellationToken)
-    {
-        var region = GetRequiredConfig("AWS:Region");
-        var endpoint = $"https://cognito-idp.{region}.amazonaws.com/";
-
-        // Log tam de xac nhan runtime dang goi dung endpoint Cognito nao.
-        _logger.LogInformation(
-            "Sending Cognito request. Target={Target}, Region={Region}, Endpoint={Endpoint}",
-            target,
-            region,
-            endpoint);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        request.Headers.TryAddWithoutValidation("X-Amz-Target", target);
-        request.Headers.TryAddWithoutValidation("Accept", "application/json");
-        request.Content = new StringContent(
-            // Cognito JSON API yeu cau dung ten field PascalCase nhu ClientId, Username...
-            JsonSerializer.Serialize(payload, CognitoJsonOptions),
-            Encoding.UTF8,
-            "application/x-amz-json-1.1");
-
-        return await _httpClient.SendAsync(request, cancellationToken);
-    }
-
-    private static async Task<JsonDocument> ReadResponseDocumentAsync(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
-    {
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            content = "{}";
+            await _cognitoClient.ResendConfirmationCodeAsync(new ResendConfirmationCodeRequest
+            {
+                ClientId = GetRequiredConfig("Cognito:ClientId"),
+                SecretHash = BuildSecretHash(request.Email),
+                Username = request.Email.Trim().ToLowerInvariant()
+            }, cancellationToken);
         }
-
-        return JsonDocument.Parse(content);
+        catch (Exception ex) when (TryMapCognitoException(ex, request.Email, out var mappedException))
+        {
+            throw mappedException;
+        }
     }
 
-    private static void EnsureSuccess(HttpResponseMessage response, JsonDocument document, string? email = null)
+    private AuthFlowType ResolveAuthFlow()
     {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        var root = document.RootElement;
-        var errorType = root.TryGetProperty("__type", out var type)
-            ? type.GetString()
-            : root.TryGetProperty("code", out var code)
-                ? code.GetString()
-                : null;
-
-        if (!string.IsNullOrWhiteSpace(errorType) && errorType.Contains('#'))
-        {
-            errorType = errorType.Split('#').Last();
-        }
-
-        var message = root.TryGetProperty("message", out var lowerMessage)
-            ? lowerMessage.GetString()
-            : root.TryGetProperty("Message", out var upperMessage)
-                ? upperMessage.GetString()
-                : "Cognito request failed.";
-
-        throw MapCognitoException(errorType, message, email);
+        var configuredFlow = _configuration["Cognito:AuthFlow"];
+        return string.IsNullOrWhiteSpace(configuredFlow)
+            ? AuthFlowType.USER_PASSWORD_AUTH
+            : new AuthFlowType(configuredFlow);
     }
 
-    private static Exception MapCognitoException(string? errorType, string? message, string? email)
+    private static bool TryMapCognitoException(Exception exception, string? email, out Exception mappedException)
     {
-        return errorType switch
+        mappedException = exception switch
         {
-            "UsernameExistsException" => new DuplicateEntityException("User", "email", email ?? "unknown"),
-            "NotAuthorizedException" => new InvalidCredentialsException(),
-            "UserNotFoundException" => new InvalidCredentialsException(),
-            "CodeMismatchException" => new ValidationException(
+            UsernameExistsException => new DuplicateEntityException("User", "email", email ?? "unknown"),
+            NotAuthorizedException => new InvalidCredentialsException(),
+            UserNotFoundException => new InvalidCredentialsException(),
+            CodeMismatchException ex => new ValidationException(
                 "Ma OTP khong dung.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Ma OTP khong chinh xac." }),
-            "ExpiredCodeException" => new ValidationException(
+                new Dictionary<string, string> { ["otp"] = ex.Message ?? "Ma OTP khong chinh xac." }),
+            ExpiredCodeException ex => new ValidationException(
                 "Ma OTP da het han.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Ma OTP da het han, vui long yeu cau ma moi." }),
-            "LimitExceededException" => new ValidationException(
+                new Dictionary<string, string> { ["otp"] = ex.Message ?? "Ma OTP da het han, vui long yeu cau ma moi." }),
+            LimitExceededException ex => new ValidationException(
                 "Ban da yeu cau qua nhieu lan.",
-                new Dictionary<string, string> { ["otp"] = message ?? "Vui long doi it phut roi thu lai." }),
-            "UserNotConfirmedException" => new ValidationException(
+                new Dictionary<string, string> { ["otp"] = ex.Message ?? "Vui long doi it phut roi thu lai." }),
+            UserNotConfirmedException => new ValidationException(
                 "Tai khoan chua duoc xac nhan.",
                 new Dictionary<string, string> { ["email"] = "Vui long xac nhan email truoc khi dang nhap." }),
-            "InvalidPasswordException" => new ValidationException(
+            InvalidPasswordException ex => new ValidationException(
                 "Mat khau khong hop le.",
-                new Dictionary<string, string> { ["password"] = message ?? "Mat khau khong dap ung policy cua Cognito." }),
-            "InvalidParameterException" => new ValidationException(
+                new Dictionary<string, string> { ["password"] = ex.Message ?? "Mat khau khong dap ung policy cua Cognito." }),
+            InvalidParameterException ex => new ValidationException(
                 "Du lieu gui len khong hop le.",
-                new Dictionary<string, string> { ["auth"] = message ?? "Yeu cau khong hop le." }),
-            _ => new InvalidOperationException(message ?? "Cognito request failed.")
+                new Dictionary<string, string> { ["auth"] = ex.Message ?? "Yeu cau khong hop le." }),
+            TooManyRequestsException ex => new ValidationException(
+                "Ban da gui qua nhieu yeu cau.",
+                new Dictionary<string, string> { ["auth"] = ex.Message ?? "Vui long doi it phut roi thu lai." }),
+            AmazonCognitoIdentityProviderException ex => new InvalidOperationException(ex.Message ?? "Cognito request failed."),
+            _ => exception
         };
+
+        return !ReferenceEquals(mappedException, exception);
     }
 
     private Dictionary<string, string> BuildAuthParameters(LoginRequest request)
@@ -290,11 +219,11 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
         return authParameters;
     }
 
-    private object[] BuildUserAttributes(RegisterRequest request)
+    private List<AttributeType> BuildUserAttributes(RegisterRequest request)
     {
-        var attributes = new List<object>
+        var attributes = new List<AttributeType>
         {
-            new
+            new()
             {
                 Name = "email",
                 Value = request.Email.Trim().ToLowerInvariant()
@@ -303,14 +232,14 @@ public sealed class CognitoAuthProvider : ICognitoAuthProvider
 
         if (!string.IsNullOrWhiteSpace(request.FullName))
         {
-            attributes.Add(new
+            attributes.Add(new AttributeType
             {
                 Name = "name",
                 Value = request.FullName.Trim()
             });
         }
 
-        return attributes.ToArray();
+        return attributes;
     }
 
     private string? BuildSecretHash(string username)
