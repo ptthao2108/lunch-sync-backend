@@ -99,6 +99,11 @@ public sealed class SessionScoringService
         // ── 7. Persist (spec §6.7) — update cache instead of database ────────
         var groupVectorAsFloat = effectiveVector.Select(d => (float)d).ToList();
 
+
         await _sessionCache.UpdateScoringResultsAsync(pin, groupVectorAsFloat, top3Ids, top5Ids, expireMinutes: 30);
+        await _uow.Sessions.UpdateSessionAsync(session, s => s.GroupVector, groupVectorAsFloat);
+        await _uow.Sessions.UpdateSessionAsync(session, s => s.TopDishIds, top3Ids);
+        await _uow.Sessions.UpdateSessionAsync(session, s => s.TopRestaurantIds, top5Ids);
+        await _sessionCache.UpdateStatusAndExpireAsync(pin, SessionStatus.Results, expireMinutes: 5);
     }
 }

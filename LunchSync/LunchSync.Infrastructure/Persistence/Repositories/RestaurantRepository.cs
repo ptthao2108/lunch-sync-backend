@@ -44,12 +44,16 @@ public class RestaurantRepository : IRestaurantRepository
     //Danh sách nhà hàng theo top dishes
     public async Task<List<Restaurant>> GetRestaurantsByTopDishesAsync(Guid collectionId, IEnumerable<Guid> topDishIds, CancellationToken ct = default)
     {
-        return await _context.RestaurantCollections
-            .Where(rc => rc.CollectionId == collectionId)
-            .Select(rc => rc.Restaurant)
+        var topDishList = topDishIds.ToList(); // tránh multiple enumeration
+
+        return await _context.Restaurants
             .Include(r => r.RestaurantDishes)
                 .ThenInclude(rd => rd.Dish)
-            .Where(r => r.RestaurantDishes.Any(rd => topDishIds.Contains(rd.DishId)))
+            .Include(r => r.RestaurantCollections)
+                .ThenInclude(rc => rc.Collection)
+            .Where(r =>
+                r.RestaurantCollections.Any(rc => rc.CollectionId == collectionId)
+                && r.RestaurantDishes.Any(rd => topDishList.Contains(rd.DishId)))
             .AsNoTracking()
             .ToListAsync(ct);
     }

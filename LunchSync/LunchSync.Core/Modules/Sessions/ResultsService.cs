@@ -18,22 +18,24 @@ internal class ResultsService : IResultsService
     private readonly ISessionRepository _sessionRepo;
     private readonly IRestaurantRepository _restaurantRepo;
     private readonly IDishRepository _dishRepo;
+    private readonly ISessionCache _sessionCache;
 
     public ResultsService(
         ISessionRepository sessionRepo,
         IRestaurantRepository restaurantRepo,
-        IDishRepository dishRepo)
+        IDishRepository dishRepo, ISessionCache sessionCache)
     {
         _sessionRepo = sessionRepo;
         _restaurantRepo = restaurantRepo;
         _dishRepo = dishRepo;
+        _sessionCache = sessionCache;
     }
 
     // ── GET /results ─────────────────────────────────────────────────────────
 
     public async Task<GetResultsDto> GetResultsAsync(string pin, CancellationToken ct = default)
     {
-        var session = await _sessionRepo.GetActiveSessionByPinAsync(pin, ct)
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
             ?? throw new SessionNotFoundException(pin);
 
         var validStatuses = new[]
@@ -78,7 +80,7 @@ internal class ResultsService : IResultsService
 
     public async Task<BoomResultDto> BoomAsync(string pin, Guid hostId, CancellationToken ct = default)
     {
-        var session = await _sessionRepo.GetActiveSessionByPinAsync(pin, ct)
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
             ?? throw new SessionNotFoundException(pin);
 
         ValidateIsHost(session, hostId);
@@ -112,6 +114,8 @@ internal class ResultsService : IResultsService
         var topDishIdSet = new HashSet<Guid>(
             session.TopDishIds?.Take(7) ?? Enumerable.Empty<Guid>());
 
+        await _sessionCache.UpdateStatusAndExpireAsync(pin, SessionStatus.Picking, expireMinutes: 5);
+
         return ResultMappers.ToBoomResultDto(
             eliminatedIds,
             remainingIds,
@@ -126,7 +130,7 @@ internal class ResultsService : IResultsService
     public async Task<PickResultDto> PickAsync(
         string pin, Guid hostId, Guid restaurantId, CancellationToken ct = default)
     {
-        var session = await _sessionRepo.GetActiveSessionByPinAsync(pin, ct)
+        var session = await _sessionCache.GetActiveSessionByPinAsync(pin, ct)
             ?? throw new SessionNotFoundException(pin);
 
         ValidateIsHost(session, hostId);
@@ -160,7 +164,7 @@ internal class ResultsService : IResultsService
                             .TryGetValue(restaurantId, out var s) ? s : 0;
         var topDishIdSet = new HashSet<Guid>(
             session.TopDishIds?.Take(7) ?? Enumerable.Empty<Guid>());
-
+        await _sessionCache.UpdateStatusAndExpireAsync(pin, SessionStatus.Done, expireMinutes: 5);
         return ResultMappers.ToPickResultDto(final, score, rank, topDishIdSet);
     }
 

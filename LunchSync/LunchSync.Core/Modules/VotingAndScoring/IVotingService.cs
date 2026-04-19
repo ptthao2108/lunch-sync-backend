@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using LunchSync.Core.Modules.Sessions;
+
 namespace LunchSync.Core.Modules.VotingAndScoring;
 public interface IVotingService
 {
@@ -24,5 +26,5 @@ public interface IVotingService
     /// Host manually closes voting (lazy evaluation fallback).
     /// Runs scoring on participants who have voted so far.
     /// </summary>
-    Task CloseVotingAsync(string pin, Guid hostUserId, CancellationToken ct = default);
+    Task<SessionCancelRes> CloseVotingAsync(string pin, Guid hostUserId, CancellationToken ct = default);
 }
